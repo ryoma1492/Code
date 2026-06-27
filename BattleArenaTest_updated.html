@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Castle Brawl</title>
+<script src="webxdc.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#1a0f07;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    overflow:hidden;
+    height:100vh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+  #lobby {
+    text-align:center;
+    max-width:480px;
+    padding:24px;
+  }
+  #lobby h1 {
+    font-size:2.4em;
+    color:#f0d080;
+    text-shadow:0 0 12px #c8960060, 2px 2px 4px #000;
+    margin-bottom:6px;
+  }
+  #lobby h2 {
+    font-size:1.1em;
+    color:#c89060;
+    margin-bottom:20px;
+    font-weight:normal;
+  }
+  .hero-banner {
+    font-size:3em;
+    margin:12px 0;
+    text-shadow:2px 2px 8px #000;
+  }
+  .btn {
+    background:linear-gradient(180deg,#8b4513,#5c2a0a);
+    border:2px solid #c8960060;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    font-size:1.1em;
+    padding:10px 28px;
+    cursor:pointer;
+    border-radius:4px;
+    margin:6px;
+    text-shadow:1px 1px 2px #000;
+    transition:all 0.15s;
+  }
+  .btn:hover { background:linear-gradient(180deg,#a0521a,#7a3a10); border-color:#f0d080a0; }
+  .btn:active { transform:scale(0.97); }
+  #nameInput {
+    background:#2a1a0a;
+    border:2px solid #8b6030;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    font-size:1.1em;
+    padding:8px 14px;
+    border-radius:4px;
+    width:200px;
+    text-align:center;
+    margin:8px;
+    outline:none;
+  }
+  #nameInput:focus { border-color:#f0d080; }
+  #playerCount {
+    color:#a08040;
+    font-size:0.95em;
+    margin-top:12px;
+  }
+  .classBtn {
+    display:inline-block;
+    background:#1e1008;
+    border:2px solid #6b4020;
+    color:#c89060;
+    font-family:'Georgia',serif;
+    padding:8px 14px;
+    cursor:pointer;
+    border-radius:4px;
+    margin:4px;
+    text-align:center;
+    min-width:90px;
+    transition:all 0.15s;
+    font-size:0.9em;
+  }
+  .classBtn:hover { border-color:#f0d080; color:#f0d080; }
+  .classBtn.selected { background:#5c2a0a; border-color:#f0d080; color:#f0d080; }
+  .classEmoji { font-size:1.8em; display:block; }
+  #gameWrap {
+    display:none;
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
+  /* FIXED: Targeted only the main canvas ID so it doesn't break the minimap sizing */
+  #canvas {
+    display:block;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    image-rendering:pixelated;
+  }
+  #hud {
+    position:absolute;
+    top:0; left:0; right:0;
+    pointer-events:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding:8px 12px;
+  }
+  #hpBar {
+    background:#1a0a00;
+    border:2px solid #8b4513;
+    border-radius:6px;
+    width:160px;
+    height:22px;
+    overflow:hidden;
+  }
+  #hpFill {
+    height:100%;
+    background:linear-gradient(90deg,#cc2200,#ff4400);
+    transition:width 0.1s;
+  }
+  #staminaBar {
+    background:#1a0a00;
+    border:2px solid #4a7a20;
+    border-radius:6px;
+    width:120px;
+    height:14px;
+    overflow:hidden;
+    margin-top:4px;
+  }
+  #staminaFill {
+    height:100%;
+    background:linear-gradient(90deg,#3a9a20,#60cc40);
+    transition:width 0.15s;
+  }
+  #killsDisplay {
+    font-size:1.2em;
+    color:#f0d080;
+    text-shadow:1px 1px 3px #000;
+  }
+  #statusMsg {
+    position:absolute;
+    bottom:140px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#f0d080;
+    font-size:1.3em;
+    text-shadow:2px 2px 6px #000;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.3s;
+    white-space:nowrap;
+    z-index: 10;
+  }
+  #touchControls {
+    position:absolute;
+    bottom:0;
+    left:0;
+    right:0;
+    height:0;
+    pointer-events:none;
+  }
+  #joystickZone {
+    position:absolute;
+    width:18vmin;
+    height:18vmin;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    left:calc(10px + env(safe-area-inset-left, 0px));
+    background:rgba(0,0,0,0.18);
+    border:1.5px solid rgba(200,150,60,0.25);
+    border-radius:50%;
+    pointer-events:all;
+    touch-action:none;
+  }
+  #joystickThumb {
+    width:38%;
+    height:38%;
+    background:radial-gradient(#c89060,#8b4513);
+    border:1.5px solid rgba(240,208,128,0.7);
+    border-radius:50%;
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  /* REFACTORED: 3-Button Action Grid Cluster Layout */
+  #actionButtons {
+    position:absolute;
+    display:grid;
+    grid-template-areas: 
+      "abil atk"
+      ".    roll";
+    gap:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    right:calc(10px + env(safe-area-inset-right, 0px));
+    pointer-events:all;
+  }
+  #btnAbility { grid-area: abil; border-color: rgba(240,208,128,0.7); }
+  #btnAttack  { grid-area: atk; }
+  #btnRoll    { grid-area: roll; }
+
+  .actionBtn {
+    width:13vmin;
+    height:13vmin;
+    border-radius:50%;
+    border:1.5px solid rgba(240,208,128,0.35);
+    font-size:clamp(1em, 4vmin, 1.8em);
+    background:rgba(0,0,0,0.28);
+    cursor:pointer;
+    touch-action:none;
+    user-select:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .actionBtn:active { background:rgba(200,150,60,0.35); }
+  #minimap {
+    position:absolute;
+    top:60px;
+    right:8px;
+    border:1px solid #8b6030;
+    background:rgba(10,5,0,0.8);
+    z-index: 5;
+  }
+  #respawnOverlay {
+    display:none;
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    align-items:center;
+    justify-content:center;
+    font-size:1.5em;
+    color:#f0d080;
+    text-shadow:2px 2px 6px #000;
+    pointer-events:none;
+    z-index: 20;
+  }
+  .lobbySection { margin:10px 0; }
+  .lobbyLabel { color:#a08040; font-size:0.85em; margin-bottom:4px; }
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <div class="hero-banner">⚔️🏰⚔️</div>
+  <h1>Castle Brawl</h1>
+  <h2>Medieval Melee Arena</h2>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">YOUR NAME</div>
+    <input id="nameInput" type="text" maxlength="16" placeholder="Enter name…" autocomplete="off"/>
+  </div>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">CHOOSE YOUR CLASS</div>
+    <div id="classSelector">
+      <div class="classBtn selected" data-class="knight" onclick="selectClass(this)">
+        <span class="classEmoji">🛡️</span>Knight<br><small>HP: High · Slow</small>
+      </div>
+      <div class="classBtn" data-class="rogue" onclick="selectClass(this)">
+        <span class="classEmoji">🗡️</span>Rogue<br><small>HP: Med · Fast</small>
+      </div>
+      <div class="classBtn" data-class="barbarian" onclick="selectClass(this)">
+        <span class="classEmoji">🪓</span>Barb<br><small>HP: Med · Hit+</small>
+      </div>
+      <div class="classBtn" data-class="archer" onclick="selectClass(this)">
+        <span class="classEmoji">🏹</span>Archer<br><small>HP: Low · Fast</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="lobbySection">
+    <button class="btn" onclick="joinGame()">⚔️ Enter the Arena</button>
+  </div>
+
+  <div id="playerCount">Waiting for warriors…</div>
+  <div style="color:#6a4020;font-size:0.78em;margin-top:12px;">
+    Arrow keys / WASD to move · Z or Space to attack · X to roll<br>
+    <strong>C key to activate Class Special Ability</strong><br>
+    On mobile: joystick + action cluster buttons
+  </div>
+</div>
+
+<div id="gameWrap">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>
+      <div style="color:#c89060;font-size:0.75em;margin-bottom:2px;" id="playerNameHud"></div>
+      <div id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+      <div id="staminaBar"><div id="staminaFill" style="width:100%"></div></div>
+    </div>
+    <div id="killsDisplay">⚔️ 0 kills</div>
+  </div>
+
+  <canvas id="minimap" width="80" height="80"></canvas>
+
+  <div id="statusMsg"></div>
+  <div id="respawnOverlay">💀 Defeated! Respawning…</div>
+
+  <div id="touchControls">
+    <div id="joystickZone"><div id="joystickThumb"></div></div>
+    <div id="actionButtons">
+      <div class="actionBtn" id="btnAbility">✨</div>
+      <div class="actionBtn" id="btnAttack">⚔️</div>
+      <div class="actionBtn" id="btnRoll">💨</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===========================
+//  WEBXDC POLYFILL (browser fallback for testing)
+// ===========================
+if (!window.webxdc) {
+  const fakeUpdates = [];
+  let fakeSerial = 0;
+  let fakeListener = null;
+  window.webxdc = {
+    selfAddr: 'player1@local',
+    selfName: 'Player1',
+    sendUpdate(u) {
+      fakeSerial++;
+      const upd = { payload: u.payload, serial: fakeSerial };
+      fakeUpdates.push(upd);
+      setTimeout(() => { if (fakeListener) fakeListener(upd); }, 50);
+    },
+    setUpdateListener(fn, serial) {
+      fakeListener = fn;
+      fakeUpdates.filter(u => u.serial > (serial||0)).forEach(u => fn(u));
+      return Promise.resolve();
+    },
+    joinRealtimeChannel() {
+      return {
+        setListener(fn) {},
+        send(data) {},
+        leave() {}
+      };
+    }
+  };
+}
+
+// ===========================
+//  GAME CONSTANTS & CONFIG
+// ===========================
+const TILE = 32;
+const MAP_W = 40; 
+const MAP_H = 30;
+const CANVAS_W = MAP_W * TILE;
+const CANVAS_H = MAP_H * TILE;
+
+// REFACTORED: Class configuration updates supporting customized ranges and special cooldown rules
+const CLASS_DEFS = {
+  knight:    { speed:120, maxHp:120, dmg:25, attackRange:52,  attackCooldown:0.7,  rollSpeed:200, color:'#8899cc', emoji:'🛡️', symbol:'K', abilCd: 10.0 },
+  rogue:     { speed:200, maxHp:80,  dmg:20, attackRange:44,  attackCooldown:0.45, rollSpeed:300, color:'#887755', emoji:'🗡️', symbol:'R', abilCd: 12.0 },
+  barbarian: { speed:155, maxHp:100, dmg:35, attackRange:56,  attackCooldown:0.85, rollSpeed:230, color:'#cc7733', emoji:'🪓', symbol:'B', abilCd: 8.0  },
+  archer:    { speed:185, maxHp:70,  dmg:22, attackRange:150, attackCooldown:0.55, rollSpeed:280, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
+};
+
+const RAW_MAP = [
+  '1111111111111111111111111111111111111111',
+  '1000000000000001111100000000000000000001',
+  '1000300000000000000000000000003000000001',
+  '1000030000002200022000220000300000000001',
+  '1000000000002200022000220000000000000001',
+  '1000000000000000000000000000000000000001',
+  '1111000000000000000000000000000001111001',
+  '1000000003000000000000000003000000000001',
+  '1000000000000004444444000000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1002200000000044444444440000000022000001',
+  '1002200000000044444444440000000022000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1002200000000044444444440000000022000001',
+  '1002200000000044444444440000000022000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000044444444440000000000000001',
+  '1000000000000000000000000000000000000001',
+  '1000000003000000000000000003000000000001',
+  '1111000000000000000000000000000001111001',
+  '1000000000000000000000000000000000000001',
+  '1000300000002200022000220000003000000001',
+  '1000000000000001111100000000000000000001',
+  '1111111111111111111111111111111111111111',
+];
+
+const MAP = RAW_MAP.map(row => row.split('').map(Number));
+
+function tileBlocks(tx,ty) {
+  if (tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return true;
+  const t = MAP[ty][tx];
+  return t===1||t===2||t===3||t===4;
+}
+
+// ===========================
+//  GAME STATE
+// ===========================
+let myId = window.webxdc.selfAddr;
+let myName = window.webxdc.selfName || 'Warrior';
+let myClass = 'knight';
+
+const players = {}; 
+let myPlayer = null;
+let kills = 0;
+let dead = false;
+let respawnTimer = 0;
+
+let rtChannel = null;
+let lastSerial = 0;
+
+const floaters = [];
+const swings = [];
+const particles = [];
+
+// NEW STATE: Map item loot and archer explosive arrow tracking
+const items = [];
+const bombArrows = [];
+let itemSpawnTimer = 0;
+
+const keys = {};
+let joyX = 0, joyY = 0; 
+let camX = 0, camY = 0;
+
+const SPAWN_POINTS = [
+  {x:3,y:2},{x:36,y:2},{x:3,y:27},{x:36,y:27},
+  {x:3,y:14},{x:36,y:14},{x:19,y:2},{x:19,y:27},
+];
+
+function randomSpawn() {
+  const sp = SPAWN_POINTS[Math.floor(Math.random()*SPAWN_POINTS.length)];
+  return { x: sp.x*TILE + TILE/2, y: sp.y*TILE + TILE/2 };
+}
+
+function createPlayer(id, name, cls, x, y) {
+  const def = CLASS_DEFS[cls] || CLASS_DEFS.knight;
+  return {
+    id, name, cls,
+    x, y,
+    vx:0, vy:0,
+    angle: 0,
+    hp: def.maxHp,
+    maxHp: def.maxHp,
+    baseDmg: def.dmg, // Preserve original damage default to reset after death
+    dmg: def.dmg,
+    attackRange: def.attackRange,
+    attackCooldown: def.attackCooldown,
+    rollSpeed: def.rollSpeed,
+    color: def.color,
+    emoji: def.emoji,
+    kills: 0,
+    attackTimer: 0,
+    rollTimer: 0,
+    rollDir: {x:0,y:0},
+    stamina: 100,
+    maxStamina: 100,
+    dead: false,
+    respawnTimer: 0,
+    lastSeen: Date.now(),
+    
+    // NEW STATE: Manage duration and recharge of dedicated special mechanics
+    abilTimer: 0,
+    abilCdTimer: 0
+  };
+}
+
+// ===========================
+//  LOBBY
+// ===========================
+function selectClass(el) {
+  document.querySelectorAll('.classBtn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  myClass = el.dataset.class;
+}
+
+function joinGame() {
+  const inp = document.getElementById('nameInput').value.trim();
+  if (inp) myName = inp;
+
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('gameWrap').style.display = 'block';
+
+  initGame();
+}
+
+window.webxdc.setUpdateListener(onLobbyUpdate, 0).then(() => {
+  window.webxdc.sendUpdate({
+    payload: { type: 'lobby', name: window.webxdc.selfName || 'Warrior', id: myId }
+  });
+});
+
+const lobbyPlayers = {};
+function onLobbyUpdate(update) {
+  const p = update.payload;
+  if (!p) return;
+  if (p.type === 'lobby') {
+    lobbyPlayers[p.id] = p.name;
+    const count = Object.keys(lobbyPlayers).length;
+    document.getElementById('playerCount').textContent =
+      count === 1 ? '1 warrior ready' : count + ' warriors in the hall';
+  }
+}
+
+// ===========================
+//  GAME INIT
+// ===========================
+let canvas, ctx, minimapCanvas, minimapCtx;
+let lastTime = 0;
+
+function initGame() {
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  minimapCanvas = document.getElementById('minimap');
+  minimapCtx = minimapCanvas.getContext('2d');
+
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  const sp = randomSpawn();
+  myPlayer = createPlayer(myId, myName, myClass, sp.x, sp.y);
+  players[myId] = myPlayer;
+
+  document.getElementById('playerNameHud').textContent = myPlayer.emoji + ' ' + myPlayer.name;
+
+  if (window.webxdc.joinRealtimeChannel) {
+    rtChannel = window.webxdc.joinRealtimeChannel();
+    rtChannel.setListener(onRTMessage);
+  }
+
+  window.webxdc.setUpdateListener(onGameUpdate, lastSerial);
+
+  broadcastJoin();
+  setupKeyboard();
+  setupTouch();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+// ===========================
+//  NETWORK
+// ===========================
+function broadcastJoin() {
+  window.webxdc.sendUpdate({
+    payload: {
+      type: 'join',
+      id: myId,
+      name: myName,
+      cls: myClass,
+      x: myPlayer.x,
+      y: myPlayer.y,
+    }
+  });
+}
+
+let rtSendTimer = 0;
+function broadcastState(dt) {
+  if (!myPlayer) return;
+  rtSendTimer += dt;
+  if (rtSendTimer < 0.05) return; 
+  rtSendTimer = 0;
+
+  const msg = {
+    t: 's', 
+    id: myId,
+    x: Math.round(myPlayer.x),
+    y: Math.round(myPlayer.y),
+    a: Math.round(myPlayer.angle * 100) / 100,
+    hp: myPlayer.hp,
+    d: myPlayer.dead ? 1 : 0,
+    k: myPlayer.kills,
+    at: Math.round(myPlayer.abilTimer * 100) / 100 // Sync current active ability duration state
+  };
+  if (rtChannel) {
+    const encoded = JSON.stringify(msg);
+    const bytes = new TextEncoder().encode(encoded);
+    rtChannel.send(bytes);
+  }
+}
+
+function broadcastAttack(targets) {
+  if (!myPlayer) return;
+  const msg = {
+    t: 'atk',
+    id: myId,
+    x: Math.round(myPlayer.x),
+    y: Math.round(myPlayer.y),
+    a: myPlayer.angle,
+    targets: targets.map(t => ({ id: t.id, dmg: t.dmg }))
+  };
+  if (rtChannel) {
+    rtChannel.send(new TextEncoder().encode(JSON.stringify(msg)));
+  }
+  window.webxdc.sendUpdate({ payload: { type: 'attack', ...msg } });
+}
+
+function onRTMessage(data) {
+  try {
+    const msg = JSON.parse(new TextDecoder().decode(data));
+    handleNetMsg(msg);
+  } catch(e) {}
+}
+
+function onGameUpdate(update) {
+  lastSerial = Math.max(lastSerial, update.serial || 0);
+  const p = update.payload;
+  if (!p) return;
+  if (p.type === 'join') handleJoin(p);
+  if (p.type === 'attack') handleAttackMsg(p);
+}
+
+function handleNetMsg(msg) {
+  if (!msg || !msg.t) return;
+  if (msg.t === 's') handleStateMsg(msg);
+  if (msg.t === 'atk') handleAttackMsg(msg);
+  if (msg.t === 'join') handleJoin(msg);
+}
+
+function handleStateMsg(msg) {
+  if (msg.id === myId) return;
+  let p = players[msg.id];
+  if (!p) return;
+  p.x = msg.x;
+  p.y = msg.y;
+  p.angle = msg.a;
+  p.hp = Math.max(0, msg.hp);
+  p.dead = !!msg.d;
+  p.kills = msg.k || 0;
+  p.abilTimer = msg.at || 0; // Receive remote ability active status
+  p.lastSeen = Date.now();
+}
+
+function handleJoin(msg) {
+  if (msg.id === myId) return;
+  if (!players[msg.id]) {
+    const sp = randomSpawn();
+    players[msg.id] = createPlayer(msg.id, msg.name || '?', msg.cls || 'knight', msg.x || sp.x, msg.y || sp.y);
+    showStatus('⚔️ ' + (msg.name||'Warrior') + ' entered the arena!');
+  }
+  players[msg.id].lastSeen = Date.now();
+  setTimeout(broadcastJoin, 300);
+}
+
+function handleAttackMsg(msg) {
+  if (!msg.targets) return;
+  msg.targets.forEach(t => {
+    if (t.id === myId && myPlayer && !myPlayer.dead) {
+      // NEW ABILITY: Knight dynamic damage complete block check
+      if (myPlayer.cls === 'knight' && myPlayer.abilTimer > 0) {
+        spawnDamageFloat(myPlayer.x, myPlayer.y - 15, 'BLOCKED', '#8899cc');
+        return;
+      }
+
+      let receivedDmg = t.dmg;
+      // NEW ABILITY: Barbarian dynamic vulnerability checks (takes 1.2x damage during rage windows)
+      if (myPlayer.cls === 'barbarian' && myPlayer.abilTimer > 0) {
+        receivedDmg = Math.round(receivedDmg * 1.2);
+      }
+
+      myPlayer.hp = Math.max(0, myPlayer.hp - receivedDmg);
+      spawnDamageFloat(myPlayer.x, myPlayer.y, receivedDmg, '#ff4040');
+      spawnBloodParticles(myPlayer.x, myPlayer.y);
+      if (myPlayer.hp <= 0) {
+        myPlayer.dead = true;
+        myPlayer.respawnTimer = 4;
+        document.getElementById('respawnOverlay').style.display = 'flex';
+      }
+    }
+  });
+}
+
+// ===========================
+//  GAME LOOP
+// ===========================
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ===========================
+//  UPDATE
+// ===========================
+function update(dt) {
+  if (!myPlayer) return;
+
+  const now = Date.now();
+  Object.keys(players).forEach(id => {
+    if (id !== myId && now - players[id].lastSeen > 15000) {
+      delete players[id];
+    }
+  });
+
+  updatePlayer(myPlayer, dt);
+  broadcastState(dt);
+  
+  // NEW SYSTEM: Manage randomly spawned arena map items
+  itemSpawnTimer += dt;
+  if (itemSpawnTimer > 7.0 && items.length < 10) {
+    itemSpawnTimer = 0;
+    spawnRandomItem();
+  }
+  updateItems(myPlayer);
+
+  // NEW SYSTEM: Manage active flying/fuse tracking for archer bomb arrows
+  updateBombArrows(dt);
+
+  updateParticles(dt);
+  updateFloaters(dt);
+  updateSwings(dt);
+  updateHUD();
+}
+
+function updatePlayer(p, dt) {
+  if (p.dead) {
+    if (p === myPlayer) {
+      p.respawnTimer -= dt;
+      if (p.respawnTimer <= 0) {
+        respawnMe();
+      }
+    }
+    return;
+  }
+
+  if (p.attackTimer > 0) p.attackTimer -= dt;
+
+  // NEW STATE: Update and decrement specific ability countdown timers
+  if (p.abilTimer > 0) p.abilTimer -= dt;
+  if (p.abilCdTimer > 0) p.abilCdTimer -= dt;
+
+  if (p.rollTimer <= 0) {
+    p.stamina = Math.min(p.maxStamina, p.stamina + 20 * dt);
+  }
+
+  if (p !== myPlayer) return; 
+
+  if (p.rollTimer > 0) {
+    p.rollTimer -= dt;
+    const spd = p.rollSpeed;
+    const nx = p.x + p.rollDir.x * spd * dt;
+    const ny = p.y + p.rollDir.y * spd * dt;
+    if (!collides(nx, p.y, 10)) p.x = nx;
+    if (!collides(p.x, ny, 10)) p.y = ny;
+    return; 
+  }
+
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']||keys['a']||keys['A']) dx -= 1;
+  if (keys['ArrowRight']||keys['d']||keys['D']) dx += 1;
+  if (keys['ArrowUp']||keys['w']||keys['W']) dy -= 1;
+  if (keys['ArrowDown']||keys['s']||keys['S']) dy += 1;
+  dx += joyX;
+  dy += joyY;
+
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len > 1) { dx /= len; dy /= len; }
+
+  if (dx !== 0 || dy !== 0) {
+    p.angle = Math.atan2(dy, dx);
+  }
+
+  // NEW ABILITY: Barbarian 1.5x dynamic speed boost when raging
+  let activeSpeed = p.speed;
+  if (p.cls === 'barbarian' && p.abilTimer > 0) {
+    activeSpeed *= 1.5;
+  }
+
+  const nx = p.x + dx * activeSpeed * dt;
+  const ny = p.y + dy * activeSpeed * dt;
+  if (!collides(nx, p.y, 10)) p.x = nx;
+  if (!collides(p.x, ny, 10)) p.y = ny;
+
+  if ((keys['z']||keys['Z']||keys[' ']) && p.attackTimer <= 0) {
+    doAttack(p);
+  }
+
+  if ((keys['x']||keys['X']) && p.rollTimer <= 0 && p.stamina >= 30) {
+    p.rollTimer = 0.28;
+    p.stamina -= 30;
+    p.rollDir = { x: Math.cos(p.angle), y: Math.sin(p.angle) };
+    spawnRollParticles(p.x, p.y);
+  }
+
+  // Keyboard support for custom action 
+  if ((keys['c']||keys['C']) && p.abilCdTimer <= 0) {
+    useAbility(p);
+  }
+}
+
+// NEW FUNCTION: Handle class ability execution logic
+function useAbility(p) {
+  if (p.dead || p.abilCdTimer > 0 || p.rollTimer > 0) return;
+  const def = CLASS_DEFS[p.cls];
+  p.abilCdTimer = def.abilCd;
+
+  if (p.cls === 'knight') {
+    p.abilTimer = 1.0; // 1 second total damage immunity
+    showStatus('🛡️ Invincible!');
+    spawnRollParticles(p.x, p.y);
+  } 
+  else if (p.cls === 'rogue') {
+    p.abilTimer = 3.0; // 3 seconds stealth shroud
+    showStatus('👤 Stealthed!');
+  } 
+  else if (p.cls === 'barbarian') {
+    p.abilTimer = 2.0; // 2 seconds rage speed multiplier window
+    showStatus('😡 RAGE MODE!');
+  } 
+  else if (p.cls === 'archer') {
+    showStatus('🚀 Bomb Arrow Launched!');
+    // Fire dynamic delayed area-of-effect bomb projectile
+    bombArrows.push({
+      x: p.x,
+      y: p.y,
+      targetX: p.x + Math.cos(p.angle) * 160, 
+      targetY: p.y + Math.sin(p.angle) * 160,
+      pct: 0,
+      fuse: 1.0, 
+      hasLanded: false,
+      ownerId: p.id
+    });
+  }
+}
+
+function collides(x, y, r) {
+  const offsets = [[-r,-r],[r,-r],[-r,r],[r,r]];
+  for (const [ox,oy] of offsets) {
+    const tx = Math.floor((x+ox)/TILE);
+    const ty = Math.floor((y+oy)/TILE);
+    if (tileBlocks(tx,ty)) return true;
+  }
+  return false;
+}
+
+function doAttack(p) {
+  p.attackTimer = p.attackCooldown;
+
+  // NEW MECHANIC: If rogue chooses to swing/engage weapon, immediately end stealth window early
+  if (p.cls === 'rogue' && p.abilTimer > 0) {
+    p.abilTimer = 0;
+  }
+
+  const targets = [];
+  Object.values(players).forEach(other => {
+    if (other.id === p.id || other.dead) return;
+    
+    // Check if target is a stealthed rogue (cannot hit invisible targets unless it's yourself playtesting)
+    if (other.cls === 'rogue' && other.abilTimer > 0) return;
+
+    const dx = other.x - p.x;
+    const dy = other.y - p.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist > p.attackRange) return;
+
+    const angleToTarget = Math.atan2(dy, dx);
+    let diff = angleToTarget - p.angle;
+    while (diff > Math.PI) diff -= 2*Math.PI;
+    while (diff < -Math.PI) diff += 2*Math.PI;
+    if (Math.abs(diff) > Math.PI*0.65) return;
+
+    // Knight immunity utility validation check
+    if (other.cls === 'knight' && other.abilTimer > 0) return;
+
+    let targetSufferedDmg = p.dmg;
+    if (other.cls === 'barbarian' && other.abilTimer > 0) {
+      targetSufferedDmg = Math.round(targetSufferedDmg * 1.2);
+    }
+
+    targets.push({ id: other.id, dmg: targetSufferedDmg });
+    other.hp = Math.max(0, other.hp - targetSufferedDmg);
+    spawnDamageFloat(other.x, other.y - 20, targetSufferedDmg, '#ffcc40');
+    spawnBloodParticles(other.x, other.y);
+    if (other.hp <= 0 && !other.dead) {
+      other.dead = true;
+      other.respawnTimer = 4;
+      p.kills++;
+      if (p.id === myId) {
+        kills++;
+        showStatus('⚔️ You slew ' + other.name + '!');
+      }
+    }
+  });
+
+  swings.push({ x:p.x, y:p.y, angle:p.angle, life:0.18, maxLife:0.18, range:p.attackRange, color:p.color });
+  broadcastAttack(targets);
+}
+
+// NEW FUNCTION: Populates map pickup arrays on valid open floor coordinates
+function spawnRandomItem() {
+  const tx = Math.floor(Math.random() * MAP_W);
+  const ty = Math.floor(Math.random() * MAP_H);
+  if (MAP[ty][tx] === 0) {
+    const itemX = tx * TILE + TILE / 2;
+    const itemY = ty * TILE + TILE / 2;
+    // Prevent duplicate spawning stacks on exact same tile
+    const exists = items.some(it => Math.abs(it.x - itemX) < 5 && Math.abs(it.y - itemY) < 5);
+    if (!exists) {
+      const type = Math.random() > 0.4 ? 'health' : 'damage';
+      items.push({ x: itemX, y: itemY, type });
+    }
+  }
+}
+
+// NEW FUNCTION: Evaluate proximity step overlaps to process picking items up
+function updateItems(p) {
+  if (p.dead) return;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    const dx = p.x - item.x;
+    const dy = p.y - item.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 20) { 
+      if (item.type === 'health') {
+        p.hp = Math.min(p.maxHp, p.hp + 40);
+        showStatus('❤️ Restored +40 HP!');
+        spawnDamageFloat(p.x, p.y - 20, 'Healed!', '#44aa22');
+      } else if (item.type === 'damage') {
+        p.dmg += 5; // Permanent item damage buff for the current life layout
+        showStatus('💎 Weapon Upgraded (+5 DMG)!');
+        spawnDamageFloat(p.x, p.y - 20, '+5 DMG', '#ffcc40');
+      }
+      items.splice(i, 1);
+    }
+  }
+}
+
+// NEW FUNCTION: Process archer projectile flight physics and structural fuse timer cycles
+function updateBombArrows(dt) {
+  for (let i = bombArrows.length - 1; i >= 0; i--) {
+    let b = bombArrows[i];
+    if (!b.hasLanded) {
+      b.pct += dt * 3.0; 
+      b.x = b.x + (b.targetX - b.x) * Math.min(b.pct, 1);
+      b.y = b.y + (b.targetY - b.y) * Math.min(b.pct, 1);
+      if (b.pct >= 1) b.hasLanded = true;
+    } else {
+      b.fuse -= dt;
+      if (b.fuse <= 0) {
+        // Evaluate dynamic explosive radius hit box impact (75px)
+        const blastRadius = 75;
+        if (myPlayer && !myPlayer.dead) {
+          const dist = Math.sqrt((myPlayer.x - b.x)**2 + (myPlayer.y - b.y)**2);
+          if (dist <= blastRadius) {
+            // Apply defensive immunity rules
+            if (!(myPlayer.cls === 'knight' && myPlayer.abilTimer > 0)) {
+              let baseBlastDmg = 40;
+              if (myPlayer.cls === 'barbarian' && myPlayer.abilTimer > 0) {
+                baseBlastDmg = Math.round(baseBlastDmg * 1.2);
+              }
+              myPlayer.hp = Math.max(0, myPlayer.hp - baseBlastDmg);
+              spawnDamageFloat(myPlayer.x, myPlayer.y, baseBlastDmg, '#ff4040');
+              spawnBloodParticles(myPlayer.x, myPlayer.y);
+              if (myPlayer.hp <= 0) {
+                myPlayer.dead = true;
+                myPlayer.respawnTimer = 4;
+                document.getElementById('respawnOverlay').style.display = 'flex';
+              }
+            }
+          }
+        }
+        
+        // Spawn aesthetic explosion particles
+        for(let p=0; p<14; p++) {
+          particles.push({
+            x: b.x, y: b.y, 
+            vx: (Math.random() - 0.5) * 200, 
+            vy: (Math.random() - 0.5) * 200, 
+            life: 0.45, color: '#ffaa00', size: 4 + Math.random() * 4
+          });
+        }
+        bombArrows.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ===========================
+//  EFFECTS
+// ===========================
+function spawnDamageFloat(x,y,dmg,color) {
+  let displayedText = typeof dmg === 'number' ? '-' + dmg : dmg;
+  floaters.push({ x, y, text:displayedText, color, life:1.2, maxLife:1.2, vy:-60 });
+}
+
+function updateFloaters(dt) {
+  for (let i=floaters.length-1;i>=0;i--) {
+    const f=floaters[i];
+    f.life-=dt;
+    f.y+=f.vy*dt;
+    if (f.life<=0) floaters.splice(i,1);
+  }
+}
+
+function spawnBloodParticles(x,y) {
+  for (let i=0;i<6;i++) {
+    const a = Math.random()*Math.PI*2;
+    const spd = 60+Math.random()*80;
+    particles.push({ x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, life:0.5+Math.random()*0.3, color:'#cc2200', size:3+Math.random()*3 });
+  }
+}
+
+function spawnRollParticles(x,y) {
+  for (let i=0;i<4;i++) {
+    const a = Math.random()*Math.PI*2;
+    particles.push({ x, y, vx:Math.cos(a)*50, vy:Math.sin(a)*50, life:0.3, color:'#c8c0a0', size:2 });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i=particles.length-1;i>=0;i--) {
+    const p=particles[i];
+    p.life-=dt;
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vx*=0.85; p.vy*=0.85;
+    if (p.life<=0) particles.splice(i,1);
+  }
+}
+
+function updateSwings(dt) {
+  for (let i=swings.length-1;i>=0;i--) {
+    swings[i].life-=dt;
+    if (swings[i].life<=0) swings.splice(i,1);
+  }
+}
+
+// ===========================
+//  RESPAWN
+// ===========================
+function respawnMe() {
+  const sp = randomSpawn();
+  myPlayer.x = sp.x;
+  myPlayer.y = sp.y;
+  myPlayer.hp = myPlayer.maxHp;
+  myPlayer.dmg = myPlayer.baseDmg; // Reset collected item damage bonuses upon death tracking
+  myPlayer.dead = false;
+  myPlayer.stamina = myPlayer.maxStamina;
+  myPlayer.abilTimer = 0;
+  myPlayer.abilCdTimer = 0;
+  document.getElementById('respawnOverlay').style.display = 'none';
+  showStatus('You have risen! ⚔️');
+  broadcastJoin();
+}
+
+// ===========================
+//  HUD
+// ===========================
+function updateHUD() {
+  if (!myPlayer) return;
+  const pct = Math.max(0, myPlayer.hp / myPlayer.maxHp * 100);
+  document.getElementById('hpFill').style.width = pct+'%';
+  const sPct = Math.max(0, myPlayer.stamina / myPlayer.maxStamina * 100);
+  document.getElementById('staminaFill').style.width = sPct+'%';
+  
+  // Update ability cooldown color indicator inside touch layouts
+  const btnAbilEl = document.getElementById('btnAbility');
+  if (myPlayer.abilCdTimer > 0) {
+    btnAbilEl.style.background = 'rgba(100, 50, 20, 0.6)';
+    btnAbilEl.style.color = '#7a5a3a';
+  } else {
+    btnAbilEl.style.background = 'rgba(0,0,0,0.28)';
+    btnAbilEl.style.color = '#f0d080';
+  }
+
+  document.getElementById('killsDisplay').textContent = '⚔️ ' + kills + ' kill' + (kills!==1?'s':'');
+}
+
+let statusTimeout;
+function showStatus(msg) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(statusTimeout);
+  statusTimeout = setTimeout(() => { el.style.opacity='0'; }, 2500);
+}
+
+// ===========================
+//  RENDER
+// ===========================
+const TILE_COLORS = {
+  0: '#4a3820', 
+  1: '#2a1f10', 
+  2: '#3a2a18', 
+  3: '#5a4530', 
+  4: '#1a3550', 
+};
+
+const FLOOR_PATTERNS = [];
+
+function render() {
+  if (!canvas || !ctx || !myPlayer) return;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  camX = myPlayer.x - W/2;
+  camY = myPlayer.y - H/2;
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  renderMap();
+
+  // NEW RENDER: Drawing floating bobbing ground items
+  for (const item of items) {
+    ctx.save();
+    ctx.font = '20px Georgia';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bobbingOffset = Math.sin(Date.now() / 180) * 3;
+    const emojiStr = item.type === 'health' ? '❤️' : '💎';
+    ctx.fillText(emojiStr, item.x, item.y + bobbingOffset);
+    ctx.restore();
+  }
+
+  // NEW RENDER: Drawing flying or grounded ticking archer bomb indicators
+  for (const b of bombArrows) {
+    ctx.save();
+    if (!b.hasLanded) {
+      ctx.fillStyle = '#ffcc40';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle = Math.floor(Date.now() / 120) % 2 === 0 ? '#ff0000' : '#ffaa00';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI*2); ctx.fill();
+      
+      ctx.strokeStyle = 'rgba(255, 60, 0, 0.18)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 75, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  for (const sw of swings) {
+    const t = sw.life / sw.maxLife;
+    ctx.save();
+    ctx.globalAlpha = t * 0.55;
+    ctx.strokeStyle = '#f0d080';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.range, sw.angle - Math.PI*0.6, sw.angle + Math.PI*0.6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (const p of particles) {
+    const alpha = p.life / 0.8;
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  Object.values(players).forEach(p => {
+    if (p.dead) return;
+    renderPlayer(p);
+  });
+
+  for (const f of floaters) {
+    const alpha = f.life / f.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = f.color;
+    ctx.font = 'bold 14px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  renderMinimap();
+}
+
+function renderMap() {
+  const startTX = Math.max(0, Math.floor(camX/TILE)-1);
+  const endTX = Math.min(MAP_W, Math.ceil((camX+canvas.width)/TILE)+1);
+  const startTY = Math.max(0, Math.floor(camY/TILE)-1);
+  const endTY = Math.min(MAP_H, Math.ceil((camY+canvas.height)/TILE)+1);
+
+  for (let ty=startTY; ty<endTY; ty++) {
+    for (let tx=startTX; tx<endTX; tx++) {
+      const tile = MAP[ty][tx];
+      const px = tx*TILE, py = ty*TILE;
+
+      if (tile === 0) {
+        ctx.fillStyle = ((tx+ty)%2===0) ? '#4a3820' : '#453318';
+        ctx.fillRect(px,py,TILE,TILE);
+        if ((tx*7+ty*13)%17===0) {
+          ctx.strokeStyle = '#3a2810';
+          ctx.lineWidth=1;
+          ctx.beginPath();
+          ctx.moveTo(px+8,py+12);
+          ctx.lineTo(px+20,py+20);
+          ctx.stroke();
+        }
+      } else if (tile === 1) {
+        ctx.fillStyle = '#1e160a';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#2e2010';
+        ctx.fillRect(px+2,py+2,TILE-4,TILE-6);
+        ctx.strokeStyle = '#18100600';
+        ctx.lineWidth=1;
+        if ((tx+ty)%3===0) {
+          ctx.fillStyle='#362515';
+          ctx.fillRect(px+4,py+4,TILE/2-2,TILE/2-2);
+        }
+      } else if (tile === 2) {
+        ctx.fillStyle = '#453525';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#5a4530';
+        const pw=18, ph=TILE-4;
+        ctx.fillRect(px+(TILE-pw)/2, py+2, pw, ph);
+        ctx.fillStyle = '#6a5540';
+        ctx.fillRect(px+(TILE-pw)/2+2, py+4, pw-8, ph-8);
+        ctx.fillStyle = '#2a1a0880';
+        ctx.fillRect(px+TILE-6, py+4, 6, ph);
+      } else if (tile === 3) {
+        ctx.fillStyle = '#4a3820';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#6a5030';
+        for (let i=0;i<3;i++) {
+          const rx=(tx*17+ty*13+i*7)%20+2;
+          const ry=(tx*11+ty*19+i*5)%20+2;
+          ctx.fillRect(px+rx,py+ry,8,8);
+        }
+      } else if (tile === 4) {
+        const wave = Math.sin(Date.now()/800 + tx*0.5 + ty*0.5) * 0.15;
+        ctx.fillStyle = `rgba(25,60,100,${0.85+wave})`;
+        ctx.fillRect(px,py,TILE,TILE);
+        if ((tx+ty)%4===0) {
+          ctx.strokeStyle = `rgba(80,140,200,${0.3+wave})`;
+          ctx.lineWidth=1;
+          ctx.beginPath();
+          ctx.arc(px+TILE/2, py+TILE/2, 10, 0, Math.PI*2);
+          ctx.stroke();
+        }
+      }
+
+      if (tile===1 && ((tx===1&&ty%5===2)||(tx===MAP_W-2&&ty%5===2))) {
+        const flicker = 0.85 + Math.sin(Date.now()/200+tx+ty)*0.15;
+        ctx.fillStyle = `rgba(255,${Math.floor(150*flicker)},0,0.9)`;
+        ctx.beginPath();
+        ctx.arc(px+TILE/2, py+TILE*0.3, 4*flicker, 0, Math.PI*2);
+        ctx.fill();
+        const grad = ctx.createRadialGradient(px+TILE/2,py+TILE*0.3,0,px+TILE/2,py+TILE*0.3,24);
+        grad.addColorStop(0,`rgba(255,180,0,${0.18*flicker})`);
+        grad.addColorStop(1,'rgba(255,100,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px+TILE/2,py+TILE*0.3,24,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function renderPlayer(p) {
+  const isMe = p.id === myId;
+
+  // Safe checks to avoid property crashes
+  if (!p || !p.cls) return; 
+
+  // Hide active stealthed enemy rogues completely from other clients
+  if (p.cls === 'rogue' && p.abilTimer > 0) {
+    if (!isMe) return; 
+  }
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Render the active local user with alpha transparency while stealthed
+  if (p.cls === 'rogue' && p.abilTimer > 0 && isMe) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 14, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  const r = 14;
+  // Fallback color if class def is missing
+  ctx.fillStyle = p.color || '#ffffff'; 
+  
+  // Safe shadow visual flare indicators
+  if (isMe || (p.abilTimer > 0 && (p.cls === 'knight' || p.cls === 'barbarian'))) {
+    ctx.shadowColor = (p.cls === 'knight' && p.abilTimer > 0) ? '#f0d080' : (p.color || '#fff');
+    ctx.shadowBlur = (p.abilTimer > 0) ? 16 : 8;
+  }
+  
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = isMe ? '#ffffff' : '#ccbbaa';
+  ctx.lineWidth = isMe ? 2.5 : 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.stroke();
+
+  const wx = Math.cos(p.angle) * (r+6);
+  const wy = Math.sin(p.angle) * (r+6);
+  ctx.strokeStyle = '#f0d080';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(p.angle)*r*0.4, Math.sin(p.angle)*r*0.4);
+  ctx.lineTo(wx, wy);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(CLASS_DEFS[p.cls]?.symbol || '?', 0, 0);
+
+  ctx.restore();
+  ctx.globalAlpha = 1.0; 
+
+  if (!isMe) {
+    const bw = 32, bh = 5;
+    const hpFrac = Math.max(0, p.hp / (p.maxHp || 100));
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(p.x - bw/2, p.y - 24, bw, bh);
+    ctx.fillStyle = hpFrac > 0.5 ? '#44aa22' : hpFrac > 0.25 ? '#cc8800' : '#cc2200';
+    ctx.fillRect(p.x - bw/2, p.y - 24, bw * hpFrac, bh);
+  }
+
+  ctx.fillStyle = isMe ? '#ffffff' : '#f0d080';
+  ctx.font = isMe ? 'bold 11px Georgia' : '10px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(p.name, p.x, p.y - 26);
+}
+
+function renderMinimap() {
+  const mCtx = minimapCtx;
+  const mW = 80, mH = 80;
+  mCtx.clearRect(0,0,mW,mH);
+
+  const sx = mW / (MAP_W * TILE);
+  const sy = mH / (MAP_H * TILE);
+
+  for (let ty=0;ty<MAP_H;ty++) {
+    for (let tx=0;tx<MAP_W;tx++) {
+      const t = MAP[ty][tx];
+      if (t===1||t===2) mCtx.fillStyle='#3a2a18';
+      else if (t===4) mCtx.fillStyle='#1a3550';
+      else continue;
+      mCtx.fillRect(tx*TILE*sx, ty*TILE*sy, TILE*sx+1, TILE*sy+1);
+    }
+  }
+
+  Object.values(players).forEach(p => {
+    if (p.dead) return;
+    // Don't draw stealthed enemy rogues on the minimap either
+    if (p.id !== myId && p.cls === 'rogue' && p.abilTimer > 0) return;
+
+    mCtx.fillStyle = p.id===myId ? '#f0d080' : p.color;
+    mCtx.beginPath();
+    mCtx.arc(p.x*sx, p.y*sy, p.id===myId?3:2, 0, Math.PI*2);
+    mCtx.fill();
+  });
+}
+
+// ===========================
+//  INPUT
+// ===========================
+function setupKeyboard() {
+  window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if ([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+    }
+    // Listen for custom shortcut configuration action
+    if (e.key.toLowerCase() === 'c' && myPlayer) {
+      useAbility(myPlayer);
+    }
+  });
+  window.addEventListener('keyup', e => { keys[e.key] = false; });
+}
+
+function setupTouch() {
+  const joystickZone = document.getElementById('joystickZone');
+  const thumb = document.getElementById('joystickThumb');
+  let joyR = 60; 
+  let joyOrigin = null;
+  let joyTouchId = null;
+
+  joystickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    joyTouchId = touch.identifier;
+    const rect = joystickZone.getBoundingClientRect();
+    joyR = rect.width / 2; 
+    joyOrigin = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+  }, {passive:false});
+
+  window.addEventListener('touchmove', e => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joyTouchId) {
+        const dx = touch.clientX - joyOrigin.x;
+        const dy = touch.clientY - joyOrigin.y;
+        const len = Math.sqrt(dx*dx+dy*dy) || 1;
+        const travel = Math.min(len, joyR * 0.82);
+        joyX = (dx/len) * (travel / joyR);
+        joyY = (dy/len) * (travel / joyR);
+        const tx = (dx/len)*travel;
+        const ty = (dy/len)*travel;
+        thumb.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+      }
+    }
+  }, {passive:false});
+
+  const resetJoy = () => {
+    joyX=0; joyY=0;
+    thumb.style.transform='translate(-50%,-50%)';
+    joyTouchId=null;
+  };
+  window.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) if (t.identifier===joyTouchId) resetJoy();
+  });
+  window.addEventListener('touchcancel', resetJoy);
+
+  // REFACTORED: Integrated Touch triggers for the new layout cluster grid setup
+  document.getElementById('btnAbility').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (myPlayer) useAbility(myPlayer);
+  }, {passive:false});
+
+  document.getElementById('btnAttack').addEventListener('touchstart', e => {
+    e.preventDefault();
+    keys['z'] = true;
+  }, {passive:false});
+  document.getElementById('btnAttack').addEventListener('touchend', e => {
+    e.preventDefault();
+    keys['z'] = false;
+  }, {passive:false});
+  
+  document.getElementById('btnRoll').addEventListener('touchstart', e => {
+    e.preventDefault();
+    keys['x'] = true;
+  }, {passive:false});
+  document.getElementById('btnRoll').addEventListener('touchend', e => {
+    e.preventDefault();
+    keys['x'] = false;
+  }, {passive:false});
+}
+</script>
+</body>
+</html>
