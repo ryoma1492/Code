@@ -268,6 +268,32 @@
   #mapPreviewBox   { display:flex; flex-direction:column; align-items:center; gap:5px; }
   #mapPreviewCanvas { border:1px solid #8b6030; border-radius:3px; display:block; }
   #mapPreviewName  { font-size:0.9em; color:#f0d080; letter-spacing:0.04em; }
+  /* Win condition & bot options */
+  .lobbyRow { display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; margin-top:4px; }
+  .lobbyToggle { display:flex; align-items:center; gap:6px; font-size:0.88em; color:#c89060; cursor:pointer; }
+  .lobbyToggle input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#c89060; }
+  .lobbyNumber { width:48px; background:#2a1a0a; border:1.5px solid #8b6030; color:#f0d080;
+    font-family:'Georgia',serif; font-size:0.95em; padding:3px 6px; border-radius:4px;
+    text-align:center; outline:none; }
+  .lobbyNumber:focus { border-color:#f0d080; }
+  /* End-game overlays */
+  #victoryOverlay, #defeatOverlay {
+    display:none; position:absolute; inset:0; z-index:30;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.75); color:#f0d080; text-align:center;
+    font-family:'Georgia',serif;
+  }
+  #victoryOverlay h2 { font-size:2.2em; text-shadow:0 0 20px #f0d080; margin-bottom:10px; }
+  #defeatOverlay h2  { font-size:2.2em; color:#cc4422; text-shadow:0 0 20px #cc4422; margin-bottom:10px; }
+  .overlayDetail { font-size:1em; color:#c89060; margin-bottom:18px; }
+  /* Timer / lives HUD additions */
+  #matchHud {
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    pointer-events:none; display:flex; gap:16px; align-items:center;
+    padding:6px 14px; background:rgba(0,0,0,0.45); border-radius:0 0 8px 8px;
+    font-family:'Georgia',serif; font-size:0.9em; color:#f0d080;
+    text-shadow:1px 1px 3px #000; z-index:6;
+  }
 </style>
 </head>
 <body>
@@ -313,6 +339,27 @@
   </div>
 
   <div class="lobbySection">
+    <div class="lobbyLabel">MATCH OPTIONS</div>
+    <div class="lobbyRow">
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optBots" onchange="updateBotUi()"> Bots
+      </label>
+      <span id="botCountWrap" style="display:none; align-items:center; gap:4px;">
+        <span style="font-size:0.82em;color:#a08040;">Count:</span>
+        <input class="lobbyNumber" type="number" id="optBotCount" min="1" max="8" value="3">
+      </span>
+    </div>
+    <div class="lobbyRow" style="margin-top:6px;">
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optLives" checked> 3 Lives
+      </label>
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optTimer" checked> 3 min Timer
+      </label>
+    </div>
+  </div>
+
+  <div class="lobbySection">
     <button class="btn" onclick="joinGame()">⚔️ Enter the Arena</button>
   </div>
 
@@ -340,6 +387,24 @@
 
   <div id="statusMsg"></div>
   <div id="respawnOverlay">💀 Defeated! Respawning…</div>
+
+  <!-- Match timer / lives HUD (centre-top) -->
+  <div id="matchHud">
+    <span id="hudLives"></span>
+    <span id="hudTimer"></span>
+  </div>
+
+  <!-- End-game overlays -->
+  <div id="victoryOverlay">
+    <h2>⚔️ Victory! ⚔️</h2>
+    <div class="overlayDetail" id="victoryDetail"></div>
+    <button class="btn" onclick="location.reload()">Return to Lobby</button>
+  </div>
+  <div id="defeatOverlay">
+    <h2>💀 Defeated</h2>
+    <div class="overlayDetail" id="defeatDetail"></div>
+    <button class="btn" onclick="location.reload()">Return to Lobby</button>
+  </div>
 
   <div id="touchControls">
     <div id="joystickZone"><div id="joystickThumb"></div></div>
@@ -430,50 +495,63 @@ const MAPS = [[
 [
     '11111111111111111111111111111111111111111111111111111111111111111111',
     '10000000000000000000000000000000000000000000000000000000000000000001',
-    '10000000300000000000010111110000000000001111101000000000000300000001',
+    '10000000300000000000010011110000000000001111001000000000000300000001',
     '10000000000000000000010000010000000000001000001000003000000000000001',
-    '10000000000000300000011111010000000000001011111000000000000000000001',
+    '10000000000000000000010000010000000000001000001000003000000000000001',
+    '10000000000000300000011110010000000000001001111000000000000000000001',
+    '10000000000000000000000000000000000000000000000000000000000000000001',
+    '10000000000000000000000000000000010000000000000000000000000000000001',
+    '10000000000000000000000000000000010000000000000000000000000000000001',
+    '11111111111111100000000000000000010000000000030000000011111111111111',
     '10000000000000000000000000000000000000000000000000000000000000000001',
     '10000000000000000000000000000000000000000000000000000000000000000001',
-    '11111111111000000000000000000000000000000000030000000000011111111111',
     '10000000000000000300000000000022000000000000000000000000000000000001',
     '10000000000000000000000000000202000000000000000000000000000000000001',
     '10000000000000000000000000000000000000020200000000000000000003000001',
     '10000000000000000001000000000000000000022000000000000000000000000001',
     '10000000000000000001000000444440000000000000000000000000000000000001',
+    '10000000000000000001000000444440000000000000000000000000000000000001',
     '10000220000000300001000000444440000000000000000100030000000000000001',
+    '10000000000000000001000000444440000000000000000100000000000000000001',
     '10000000000000000001000000444440000000000000000100000000000022000001',
     '10000000000300000001000000444440000000030000000100000000000000000001',
     '10000300000000000001000000000000000000000000000100000000000000000001',
-    '10000000000000000001000000000000000000000000000100000000003000000001',
     '10000000000000000001000000000000000000000000000100000000000000000001',
+    '10000000000111110001000000000000000000000001111100000000000000000001',
+    '10000000000000000000000000000000000000000000000100000000003000000001',
+    '10000000000000000000000000000000000000000000000100000000000000000001',
     '11111111111111111111111111111111111111111111111111111111111111111111'
   ]
 ,
 [
     '1111111111111111111111111111111111111111111111111111111111111111111',
-    '1000000000000440010000000000000000000000000000000000000000000000001',
-    '1000000030000440010000000000000000000000000000000001111110000000001',
-    '1000000000000440010001000000000000000000000001111111000000000000001',
-    '1000000000000440010001111111110000000001111111000000000000000000001',
-    '1000000000000440010000000000000000000000000000000000000000022000001',
-    '1000000000000440010000000000000000000000000000000000000000022000001',
-    '1000300000000440011111111111110000000001111111111111110000000000001',
-    '1000000000000440000000000000000000000000000000000011000000000000001',
-    '1000000000000440000000000000000000000000000000000001100000000000001',
-    '1000000000000444444444444444442000000024444440003000110000000000001',
-    '1000000000000004444444444444442000000024444444000000011000000000001',
-    '1000000000000000000000000000000000000000000044440000001110000000001',
-    '1000022000000030000000000000000000000000000000444000000011000000001',
-    '1000000000000000000000000000000000000000000000004440003000002200001',
-    '1000000000000000000000000000000000000030000000002222200000000000001',
-    '1000030000000000000000003000220000000000000000000000000000000000001',
+    '1000000000004440010000000000000000000000000000000000000000000000001',
+    '1000000030004440010000000000000000000000000000000001111110000000001',
+    '1000000000004440010001000000000000000000000001111111000000000000001',
+    '1000000000004440010001111111110000000001111111000000000000000000001',
+    '1000000000004440010000000000000000000000000000000000000000022000001',
+    '1000000000004440010000000000000000000000000000000000000000022000001',
+    '1000000000004440010000000000000000000000000000000000000000000000001',
+    '1000000000004440010000000000000000000000000000000000000000000000001',
+    '1000300000004440011111111111110000000001111111111111110000000000001',
+    '1000000000004440000000000000000000000000000000000011000000000000001',
+    '1000000000004440000000000000000000000000000000000001100000000000001',
+    '1000000000004444444444444444442000000024444440003000110000000000001',
+    '1000000000004444444444444444442000000024444444000000011000000000001',
+    '1000000000000044444444444444442000000024444444400000001100000000001',
+    '1000000000000000000000000000000000000000000044440000000110000000001',
+    '1000022000000030000000000000000000000000000004444000000011000000001',
+    '1000000000000000000000000000000000000000000000044440003000000000001',
+    '1000000000000000000000000000000000000030000000222222200000000220001',
+    '10000300000000000000000030002200000000000000000000000000000222000001',
     '1000000000000000000000000000222000000000000000000000000000000000001',
     '1000000000111100000000000000220000000000000000000000000003000000001',
-    '1000000000000100000000000000000000000000000000002222200000000000001',
-    '1000030000000100000000003000000000000000000000000444000000000000001',
-    '1000000000000100000000000000000000000000000000000444000000000300001',
-    '1111111111111111111111111111111111111111111111111444111111111111111'
+    '1000000000000100000000000000000000000000000000000000000000000000001',
+    '1000000000000100000000000000000000000000000000000000000000000000001',
+    '1000000000000100000000000000000000000000000000222222200000000000001',
+    '1000030000000100000000003000000000000000000000004444000000000000001',
+    '1000000000000100000000000000000000000000000000004444000000000300001',
+    '1111111111111111111111111111111111111111111111114444111111111111111'
   ]];
 
 // ===========================
@@ -568,6 +646,28 @@ let respawnTimer = 0;
 
 let rtChannel = null;
 let lastSerial = 0;
+
+// ── MATCH OPTIONS (read from lobby controls on joinGame) ──────────
+let optBots      = false;
+let optBotCount  = 3;
+let optLives     = true;
+let optTimer     = true;
+
+// ── MATCH STATE ───────────────────────────────────────────────────
+const MATCH_DURATION = 3 * 60; // 3 minutes in seconds
+let matchTimeLeft  = MATCH_DURATION;
+let matchOver      = false;
+let myLivesLeft    = 3;
+
+// Bot AI state — purely local, not synced
+const bots = [];
+const BOT_NAMES   = ['Cedric','Aldric','Wulfric','Osric','Godwin','Leofwin','Edwulf','Brunhild'];
+const BOT_CLASSES = ['knight','rogue','barbarian','archer'];
+
+function updateBotUi() {
+  const checked = document.getElementById('optBots').checked;
+  document.getElementById('botCountWrap').style.display = checked ? 'flex' : 'none';
+}
 
 const floaters = [];
 const swings = [];
@@ -701,9 +801,23 @@ function joinGame() {
   const inp = document.getElementById('nameInput').value.trim();
   if (inp) myName = inp;
 
+  // Read match options from the lobby controls
+  optBots     = document.getElementById('optBots').checked;
+  optBotCount = Math.min(8, Math.max(1, parseInt(document.getElementById('optBotCount').value) || 3));
+  optLives    = document.getElementById('optLives').checked;
+  optTimer    = document.getElementById('optTimer').checked;
+  myLivesLeft = optLives ? 3 : Infinity;
+  matchTimeLeft = MATCH_DURATION;
+  matchOver   = false;
+
   // Apply the map the player picked in the lobby
   chooseMap(selectedMap);
   SPAWN_POINTS = generateValidSpawnPoints(MAP);
+
+  // Broadcast map choice so all peers load the same map
+  window.webxdc.sendUpdate({
+    payload: { type: 'mapChoice', mapIdx: selectedMap }
+  });
 
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('gameWrap').style.display = 'block';
@@ -718,6 +832,8 @@ window.webxdc.setUpdateListener(onLobbyUpdate, 0).then(() => {
 });
 
 const lobbyPlayers = {};
+let gameStarted = false;
+
 function onLobbyUpdate(update) {
   const p = update.payload;
   if (!p) return;
@@ -726,6 +842,13 @@ function onLobbyUpdate(update) {
     const count = Object.keys(lobbyPlayers).length;
     document.getElementById('playerCount').textContent =
       count === 1 ? '1 warrior ready' : count + ' warriors in the hall';
+  }
+  // A peer has started a game — sync the map so we load the same one
+  if (p.type === 'mapChoice' && !gameStarted) {
+    selectedMap = p.mapIdx;
+    chooseMap(selectedMap);
+    SPAWN_POINTS = generateValidSpawnPoints(MAP);
+    drawMapPreview(); // update lobby preview to match host's choice
   }
 }
 
@@ -736,6 +859,8 @@ let canvas, ctx, minimapCanvas, minimapCtx;
 let lastTime = 0;
 
 function initGame() {
+  gameStarted = true;
+
   canvas = document.getElementById('canvas');
   ctx = canvas.getContext('2d');
   minimapCanvas = document.getElementById('minimap');
@@ -756,6 +881,28 @@ function initGame() {
   }
 
   window.webxdc.setUpdateListener(onGameUpdate, lastSerial);
+
+  // Spawn local bots if enabled
+  if (optBots) {
+    const usedNames = new Set();
+    for (let i = 0; i < optBotCount; i++) {
+      let bname;
+      do { bname = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
+      while (usedNames.has(bname));
+      usedNames.add(bname);
+      const bcls  = BOT_CLASSES[Math.floor(Math.random() * BOT_CLASSES.length)];
+      const bsp   = randomSpawn();
+      const botId = 'bot_' + i + '_' + Date.now();
+      const bot   = createPlayer(botId, bname, bcls, bsp.x, bsp.y);
+      bot.isBot   = true;
+      bot.botThinkTimer  = Math.random() * 1.5; // stagger first decision
+      bot.botTarget      = null;
+      bot.botWanderAngle = Math.random() * Math.PI * 2;
+      bot.botWanderTimer = 0;
+      bots.push(bot);
+      players[botId] = bot;
+    }
+  }
 
   broadcastJoin();
   setupKeyboard();
@@ -838,6 +985,11 @@ function onGameUpdate(update) {
   lastSerial = Math.max(lastSerial, update.serial || 0);
   const p = update.payload;
   if (!p) return;
+  if (p.type === 'mapChoice' && !gameStarted) {
+    selectedMap = p.mapIdx;
+    chooseMap(selectedMap);
+    SPAWN_POINTS = generateValidSpawnPoints(MAP);
+  }
   if (p.type === 'join') handleJoin(p);
   if (p.type === 'attack') handleAttackMsg(p);
 }
@@ -918,36 +1070,49 @@ function gameLoop(timestamp) {
 //  UPDATE
 // ===========================
 function update(dt) {
-  if (!myPlayer) return;
+  if (!myPlayer || matchOver) return;
+
+  // ── Match timer ────────────────────────────────────────────────
+  if (optTimer) {
+    matchTimeLeft -= dt;
+    if (matchTimeLeft <= 0) {
+      matchTimeLeft = 0;
+      endMatch('timer');
+      return;
+    }
+  }
 
   const now = Date.now();
   Object.keys(players).forEach(id => {
-    if (id !== myId && now - players[id].lastSeen > 15000) {
+    if (id !== myId && !players[id].isBot && now - players[id].lastSeen > 15000) {
       delete players[id];
     }
   });
 
   updatePlayer(myPlayer, dt);
   broadcastState(dt);
-  
-  // NEW SYSTEM: Manage randomly spawned arena map items
+
+  // Update bots
+  for (const bot of bots) updateBot(bot, dt);
+
+  // ── Item spawning ──────────────────────────────────────────────
   itemSpawnTimer += dt;
   if (itemSpawnTimer > 7.0 && items.length < 10) {
     itemSpawnTimer = 0;
     spawnRandomItem();
   }
   updateItems(myPlayer);
+  for (const bot of bots) updateItems(bot);
 
-  // NEW SYSTEM: Manage active flying/fuse tracking for archer bomb arrows
   updateBombArrows(dt);
-
-  // NEW SYSTEM: Advance normal archer arrow projectiles
   updateArrows(dt);
-
   updateParticles(dt);
   updateFloaters(dt);
   updateSwings(dt);
   updateHUD();
+
+  // ── Win condition check ────────────────────────────────────────
+  checkWinCondition();
 }
 
 function updatePlayer(p, dt) {
@@ -1058,6 +1223,159 @@ function useAbility(p) {
       hasLanded: false,
       ownerId: p.id
     });
+  }
+}
+
+// ===========================
+//  BOT AI
+// ===========================
+function updateBot(bot, dt) {
+  if (bot.dead) {
+    bot.respawnTimer -= dt;
+    if (bot.respawnTimer <= 0) respawnBot(bot);
+    return;
+  }
+
+  if (bot.attackTimer > 0) bot.attackTimer -= dt;
+  if (bot.abilTimer   > 0) bot.abilTimer   -= dt;
+  if (bot.abilCdTimer > 0) bot.abilCdTimer -= dt;
+  if (bot.rollTimer   > 0) {
+    bot.rollTimer -= dt;
+    const nx = bot.x + bot.rollDir.x * bot.rollSpeed * dt;
+    const ny = bot.y + bot.rollDir.y * bot.rollSpeed * dt;
+    if (!collides(nx, bot.y, 10)) bot.x = nx;
+    if (!collides(bot.x, ny, 10)) bot.y = ny;
+    return;
+  }
+  bot.stamina = Math.min(bot.maxStamina, bot.stamina + 20 * dt);
+
+  // Re-pick target every ~2 s or when target is dead/gone
+  bot.botThinkTimer -= dt;
+  if (bot.botThinkTimer <= 0 || !bot.botTarget || bot.botTarget.dead) {
+    bot.botThinkTimer = 1.5 + Math.random() * 1.5;
+    const candidates = Object.values(players).filter(p =>
+      p.id !== bot.id && !p.dead && !(p.cls === 'rogue' && p.abilTimer > 0)
+    );
+    bot.botTarget = candidates.length
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : null;
+    // Occasionally use ability
+    if (bot.abilCdTimer <= 0 && Math.random() < 0.4) useAbility(bot);
+    // Occasionally roll
+    if (bot.stamina >= 30 && Math.random() < 0.2) {
+      bot.rollTimer = 0.28;
+      bot.stamina -= 30;
+      bot.rollDir = { x: Math.cos(bot.angle), y: Math.sin(bot.angle) };
+    }
+  }
+
+  let moveX = 0, moveY = 0;
+  if (bot.botTarget) {
+    const dx = bot.botTarget.x - bot.x;
+    const dy = bot.botTarget.y - bot.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    bot.angle = Math.atan2(dy, dx);
+
+    const stopDist = bot.cls === 'archer' ? 100 : bot.attackRange * 0.7;
+    if (dist > stopDist) {
+      moveX = dx / dist;
+      moveY = dy / dist;
+    }
+    // Attack when close enough and cooldown ready
+    if (dist <= bot.attackRange * 1.1 && bot.attackTimer <= 0) {
+      doAttack(bot);
+    }
+  } else {
+    // Wander
+    bot.botWanderTimer -= dt;
+    if (bot.botWanderTimer <= 0) {
+      bot.botWanderTimer = 1 + Math.random() * 2;
+      bot.botWanderAngle = Math.random() * Math.PI * 2;
+    }
+    bot.angle = bot.botWanderAngle;
+    moveX = Math.cos(bot.botWanderAngle);
+    moveY = Math.sin(bot.botWanderAngle);
+  }
+
+  // Move with speed
+  let spd = bot.speed;
+  if (bot.cls === 'barbarian' && bot.abilTimer > 0) spd *= 1.5;
+  if (moveX !== 0 || moveY !== 0) {
+    const nx = bot.x + moveX * spd * dt;
+    const ny = bot.y + moveY * spd * dt;
+    if (!collides(nx, bot.y, 10)) bot.x = nx;
+    else bot.botWanderAngle += Math.PI * 0.5; // unstick on wall
+    if (!collides(bot.x, ny, 10)) bot.y = ny;
+    else bot.botWanderAngle += Math.PI * 0.5;
+  }
+}
+
+function respawnBot(bot) {
+  const sp = randomSpawn();
+  bot.x = sp.x; bot.y = sp.y;
+  bot.hp = bot.maxHp;
+  bot.dmg = bot.baseDmg;
+  bot.dead = false;
+  bot.stamina = bot.maxStamina;
+  bot.abilTimer = 0; bot.abilCdTimer = 0;
+  // Bots always respawn (they have infinite lives)
+}
+
+// ===========================
+//  WIN CONDITION
+// ===========================
+function checkWinCondition() {
+  if (matchOver) return;
+  if (!optLives && !optTimer) return;
+
+  // Count human players still in (lives > 0 or no-lives-mode)
+  const humanAlive = Object.values(players).filter(p =>
+    !p.isBot && !p.dead && p.id !== myId
+  );
+
+  // If lives mode: eliminate players at 0 lives (handled in respawnMe / handleDeath)
+  // Check if we're the last human standing
+  if (optLives && myLivesLeft > 0) {
+    const humanAliveWithLives = Object.values(players).filter(p =>
+      !p.isBot && !p.dead
+    );
+    if (humanAliveWithLives.length <= 1 && humanAlive.length === 0) {
+      endMatch('lastStanding');
+    }
+  }
+}
+
+function endMatch(reason) {
+  if (matchOver) return;
+  matchOver = true;
+
+  const myKills = myPlayer ? myPlayer.kills : 0;
+
+  if (reason === 'eliminated') {
+    // I'm out — show defeat
+    document.getElementById('defeatDetail').textContent =
+      'You fell in battle with ' + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+    document.getElementById('defeatOverlay').style.display = 'flex';
+  } else if (reason === 'lastStanding') {
+    document.getElementById('victoryDetail').textContent =
+      'Last warrior standing! ' + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+    document.getElementById('victoryOverlay').style.display = 'flex';
+  } else if (reason === 'timer') {
+    // Most kills wins
+    let bestKills = myKills;
+    let winner = 'You';
+    Object.values(players).forEach(p => {
+      if (!p.isBot && p.kills > bestKills) { bestKills = p.kills; winner = p.name; }
+    });
+    if (winner === 'You') {
+      document.getElementById('victoryDetail').textContent =
+        "Time's up! Most kills wins — " + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+      document.getElementById('victoryOverlay').style.display = 'flex';
+    } else {
+      document.getElementById('defeatDetail').textContent =
+        "Time's up! " + winner + ' wins with ' + bestKills + ' kills. You had ' + myKills + '.';
+      document.getElementById('defeatOverlay').style.display = 'flex';
+    }
   }
 }
 
@@ -1364,17 +1682,30 @@ function updateSwings(dt) {
 //  RESPAWN
 // ===========================
 function respawnMe() {
+  // Deduct a life if lives mode is active
+  if (optLives && isFinite(myLivesLeft)) {
+    myLivesLeft--;
+    if (myLivesLeft <= 0) {
+      // Permanently eliminated
+      document.getElementById('respawnOverlay').style.display = 'none';
+      myPlayer.dead = true;
+      endMatch('eliminated');
+      return;
+    }
+  }
+
   const sp = randomSpawn();
   myPlayer.x = sp.x;
   myPlayer.y = sp.y;
   myPlayer.hp = myPlayer.maxHp;
-  myPlayer.dmg = myPlayer.baseDmg; // Reset collected item damage bonuses upon death tracking
+  myPlayer.dmg = myPlayer.baseDmg;
   myPlayer.dead = false;
   myPlayer.stamina = myPlayer.maxStamina;
   myPlayer.abilTimer = 0;
   myPlayer.abilCdTimer = 0;
   document.getElementById('respawnOverlay').style.display = 'none';
-  showStatus('You have risen! ⚔️');
+  const livesStr = (optLives && isFinite(myLivesLeft)) ? ' (' + myLivesLeft + ' ' + (myLivesLeft===1?'life':'lives') + ' left)' : '';
+  showStatus('You have risen! ⚔️' + livesStr);
   broadcastJoin();
 }
 
@@ -1387,8 +1718,7 @@ function updateHUD() {
   document.getElementById('hpFill').style.width = pct+'%';
   const sPct = Math.max(0, myPlayer.stamina / myPlayer.maxStamina * 100);
   document.getElementById('staminaFill').style.width = sPct+'%';
-  
-  // Update ability cooldown color indicator inside touch layouts
+
   const btnAbilEl = document.getElementById('btnAbility');
   if (myPlayer.abilCdTimer > 0) {
     btnAbilEl.style.background = 'rgba(100, 50, 20, 0.6)';
@@ -1399,6 +1729,25 @@ function updateHUD() {
   }
 
   document.getElementById('killsDisplay').textContent = '⚔️ ' + kills + ' kill' + (kills!==1?'s':'');
+
+  // Centre-top match HUD
+  const livesEl = document.getElementById('hudLives');
+  const timerEl = document.getElementById('hudTimer');
+
+  if (optLives && isFinite(myLivesLeft)) {
+    livesEl.textContent = '❤️'.repeat(Math.max(0, myLivesLeft));
+  } else {
+    livesEl.textContent = '';
+  }
+
+  if (optTimer) {
+    const m = Math.floor(matchTimeLeft / 60);
+    const s = Math.floor(matchTimeLeft % 60);
+    timerEl.textContent = '⏱ ' + m + ':' + String(s).padStart(2, '0');
+    timerEl.style.color = matchTimeLeft < 30 ? '#ff6040' : '#f0d080';
+  } else {
+    timerEl.textContent = '';
+  }
 }
 
 let statusTimeout;
