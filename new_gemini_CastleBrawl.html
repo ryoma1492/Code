@@ -1,0 +1,1255 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Castle Brawl</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background-color: #111;
+        }
+
+        /* UI Overlays */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(20, 20, 20, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .hidden {
+            display: none !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #e74c3c;
+            text-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #f1c40f;
+        }
+
+        .panel {
+            background: rgba(40, 40, 40, 0.9);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 25px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #bdc3c7;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        /* Class Selection Grid */
+        .class-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .class-card {
+            background: #2c3e50;
+            border: 2px solid #34495e;
+            border-radius: 6px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .class-card:hover {
+            transform: translateY(-2px);
+            border-color: #3498db;
+            background: #34495e;
+        }
+
+        .class-card.selected {
+            border-color: #2ecc71;
+            background: #27ae60;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+
+        .class-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .class-desc {
+            font-size: 0.85rem;
+            color: #bdc3c7;
+            line-height: 1.3;
+        }
+
+        /* Map Selection Layout */
+        .map-selection-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 15px 0 25px 0;
+            background: #222;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #444;
+        }
+
+        .map-btn {
+            background: #34495e;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .map-btn:hover {
+            background: #2c3e50;
+        }
+
+        .map-preview-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+        }
+
+        .map-preview-canvas {
+            background: #111;
+            border: 2px solid #555;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+
+        .map-label {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        /* Button Styling */
+        .btn {
+            display: inline-block;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            width: 100%;
+            box-sizing: border-box;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background: #c0392b;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* HUD Styling */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            pointer-events: none;
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            z-index: 5;
+        }
+
+        .hud-line {
+            margin-bottom: 4px;
+        }
+        
+        .hp-bar-container {
+            width: 100px;
+            height: 8px;
+            background: #555;
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .hp-bar-fill {
+            height: 100%;
+            background: #2ecc71;
+            width: 100%;
+            transition: width 0.1s ease;
+        }
+
+        #kill-feed {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 200px;
+            max-height: 150px;
+            overflow: hidden;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 5;
+        }
+
+        .kill-msg {
+            background: rgba(0,0,0,0.7);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border-left: 4px solid #e74c3c;
+            animation: fadeInRight 0.3s ease forwards;
+        }
+
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        #leaderboard {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            min-width: 150px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .lb-title {
+            font-weight: bold;
+            border-bottom: 1px solid #555;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
+            color: #f1c40f;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .lb-entry {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+
+        .lb-entry.self {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+
+        /* Controls Help Box */
+        .controls-help {
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-align: left;
+            line-height: 1.4;
+            border-top: 1px solid #444;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-line">Player: <span id="hud-name">-</span> (<span id="hud-class">-</span>)</div>
+            <div class="hud-line">HP: <div class="hp-bar-container"><div id="hud-hp-fill" class="hp-bar-fill"></div></div> <span id="hud-hp-text">0/0</span></div>
+            <div class="hud-line">Kills: <span id="hud-kills">0</span> | Deaths: <span id="hud-deaths">0</span></div>
+            <div class="hud-line">Special Cooldown: <span id="hud-cd">Ready</span></div>
+        </div>
+
+        <!-- Kill Feed -->
+        <div id="kill-feed"></div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard">
+            <div class="lb-title">Leaderboard</div>
+            <div id="lb-entries"></div>
+        </div>
+
+        <!-- Lobby Overlay -->
+        <div id="lobby-overlay" class="overlay">
+            <h1>Castle Brawl</h1>
+            <div class="panel">
+                <div class="form-group">
+                    <label for="player-name">Character Name</label>
+                    <input type="text" id="player-name" maxlength="12" value="Hero">
+                </div>
+
+                <label>Select Class</label>
+                <div class="class-grid">
+                    <div class="class-card selected" data-class="KNIGHT">
+                        <div class="class-name">Knight <span style="color:#3498db;">🛡️</span></div>
+                        <div class="class-desc">High Health. Defensive Special blocks frontal incoming hits perfectly.</div>
+                    </div>
+                    <div class="class-card" data-class="ROGUE">
+                        <div class="class-name">Rogue <span style="color:#9b59b6;">🗡️</span></div>
+                        <div class="class-desc">Fast movement. Special triggers active Stealth Shroud hiding you from sight.</div>
+                    </div>
+                    <div class="class-card" data-class="BARBARIAN">
+                        <div class="class-name">Barbarian <span style="color:#e67e22;">🪓</span></div>
+                        <div class="class-desc">High Base Damage. Special triggers Rage Mode increasing speed and power.</div>
+                    </div>
+                    <div class="class-card" data-class="ARCHER">
+                        <div class="class-name">Archer <span style="color:#2ecc71;">🏹</span></div>
+                        <div class="class-desc">Ranged attacker. Quick firing rate, fires swift directional arrows.</div>
+                    </div>
+                </div>
+
+                <label>Select Stage Map</label>
+                <div class="map-selection-container">
+                    <button type="button" class="map-btn" id="map-prev">&lt;</button>
+                    <div class="map-preview-box">
+                        <canvas id="map-preview" class="map-preview-canvas" width="80" height="80"></canvas>
+                        <div id="map-name-label" class="map-label">Map 1</div>
+                    </div>
+                    <button type="button" class="map-btn" id="map-next">&gt;</button>
+                </div>
+
+                <button id="btn-join" class="btn">Enter Arena</button>
+
+                <div class="controls-help">
+                    <strong>Controls:</strong> WASD / Arrow Keys to Move. <br>
+                    <strong>Spacebar:</strong> Basic Attack. <br>
+                    <strong>Shift Key:</strong> Activate Class Special Ability.
+                </div>
+            </div>
+        </div>
+
+        <!-- Respawn Overlay -->
+        <div id="respawn-overlay" class="overlay hidden">
+            <h1 style="color: #c0392b;">You Were Defeated!</h1>
+            <div class="panel" style="max-width: 350px;">
+                <p id="death-info" style="margin-bottom: 20px; color:#bdc3c7;"></p>
+                <button id="btn-respawn" class="btn">Respawn</button>
+            </div>
+        </div>
+
+        <!-- Main Game Canvas -->
+        <canvas id="gameCanvas" width="800" height="800"></canvas>
+    </div>
+
+    <script>
+        // --- MULTIPLE MAP CONFIGURATIONS ---
+        const MAPS = [
+            // MAP 1: Classical cross intersection grid walls
+            [
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+                [1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,0,0,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,1,1,0,0,1],
+                [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            ],
+            // MAP 2: Arena styled ring with central blocking pillar
+            [
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,1],
+                [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1],
+                [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+                [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+                [1,0,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,0,1],
+                [1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,1],
+                [1,0,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,0,1],
+                [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+                [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+                [1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,0,1],
+                [1,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            ],
+            // MAP 3: Four corners columns and divided corridors
+            [
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+                [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+                [1,0,0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0,0,1],
+                [1,0,0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,1,1,0,0,1,1,1,0,0,0,0,1,1,1,0,0,1,1,1],
+                [1,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+                [1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,0,0,1,1,1,0,0,0,0,1,1,1,0,0,0,0,1],
+                [1,1,1,0,0,1,1,1,0,0,0,0,1,1,1,0,0,1,1,1],
+                [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                [1,0,0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0,0,1],
+                [1,0,0,1,1,0,0,0,1,1,1,1,0,0,0,1,1,0,0,1],
+                [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+                [1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+                [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            ]
+        ];
+
+        // Global Active Map Reference (controlled via Lobby UI)
+        let selectedMapIndex = 0;
+        let MAP = MAPS[selectedMapIndex];
+
+        const TILE_SIZE = 40;
+        const MAP_COLS = 20;
+        const MAP_ROWS = 20;
+
+        // Class Profiles Definition
+        const CLASS_PROFILES = {
+            KNIGHT: {
+                className: "Knight",
+                color: "#3498db",
+                maxHp: 150,
+                speed: 3.2,
+                baseDamage: 22,
+                attackCd: 600,
+                specialCd: 9000,
+                specialDuration: 2500
+            },
+            ROGUE: {
+                className: "Rogue",
+                color: "#9b59b6",
+                maxHp: 90,
+                speed: 4.5,
+                baseDamage: 18,
+                attackCd: 350,
+                specialCd: 11000,
+                specialDuration: 3500
+            },
+            BARBARIAN: {
+                className: "Barbarian",
+                color: "#e67e22",
+                maxHp: 130,
+                speed: 3.4,
+                baseDamage: 32,
+                attackCd: 800,
+                specialCd: 12000,
+                specialDuration: 4000
+            },
+            ARCHER: {
+                className: "Archer",
+                color: "#2ecc71",
+                maxHp: 100,
+                speed: 3.8,
+                baseDamage: 15,
+                attackCd: 400, // Reduced attack cooldown for rapid firing
+                specialCd: 8000,
+                specialDuration: 1
+            }
+        };
+
+        // Game State Variables
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        
+        let localPlayer = null;
+        let entities = [];
+        let particles = [];
+        let projectles = []; // Arrow array for Archer ranged shots
+        let nextEntityId = 1;
+        let killFeedQueue = [];
+
+        // Input Management
+        const keys = {};
+
+        // DOM Elements
+        const lobbyOverlay = document.getElementById("lobby-overlay");
+        const respawnOverlay = document.getElementById("respawn-overlay");
+        const playerNameInput = document.getElementById("player-name");
+        const btnJoin = document.getElementById("btn-join");
+        const btnRespawn = document.getElementById("btn-respawn");
+        const deathInfo = document.getElementById("death-info");
+
+        // HUD Elements
+        const hudName = document.getElementById("hud-name");
+        const hudClass = document.getElementById("hud-class");
+        const hudHpFill = document.getElementById("hud-hp-fill");
+        const hudHpText = document.getElementById("hud-hp-text");
+        const hudKills = document.getElementById("hud-kills");
+        const hudDeaths = document.getElementById("hud-deaths");
+        const hudCd = document.getElementById("hud-cd");
+        const lbEntries = document.getElementById("lb-entries");
+
+        // Lobby Class Selection Logic
+        let chosenClassType = "KNIGHT";
+        const classCards = document.querySelectorAll(".class-card");
+        classCards.forEach(card => {
+            card.addEventListener("click", () => {
+                classCards.forEach(c => c.classList.remove("selected"));
+                card.classList.add("selected");
+                chosenClassType = card.getAttribute("data-class");
+            });
+        });
+
+        // Lobby Minimap Preview Logic
+        const previewCanvas = document.getElementById("map-preview");
+        const previewCtx = previewCanvas.getContext("2d");
+        const mapNameLabel = document.getElementById("map-name-label");
+
+        function drawMapPreview() {
+            const previewMap = MAPS[selectedMapIndex];
+            const pTileSize = 80 / 20; // 80px divided by 20 rows/cols = 4px per tile
+            previewCtx.clearRect(0, 0, 80, 80);
+            
+            for (let r = 0; r < 20; r++) {
+                for (let c = 0; c < 20; c++) {
+                    if (previewMap[r][c] === 1) {
+                        previewCtx.fillStyle = "#555";
+                        previewCtx.fillRect(c * pTileSize, r * pTileSize, pTileSize, pTileSize);
+                    } else {
+                        previewCtx.fillStyle = "#111";
+                        previewCtx.fillRect(c * pTileSize, r * pTileSize, pTileSize, pTileSize);
+                    }
+                }
+            }
+            mapNameLabel.textContent = `Map ${selectedMapIndex + 1}`;
+        }
+
+        document.getElementById("map-prev").addEventListener("click", () => {
+            selectedMapIndex = (selectedMapIndex - 1 + MAPS.length) % MAPS.length;
+            drawMapPreview();
+        });
+
+        document.getElementById("map-next").addEventListener("click", () => {
+            selectedMapIndex = (selectedMapIndex + 1) % MAPS.length;
+            drawMapPreview();
+        });
+
+        // Initial preview draw on page load
+        drawMapPreview();
+
+        // Keyboard listeners
+        window.addEventListener("keydown", (e) => {
+            keys[e.key] = true;
+            if(e.key === " " || e.key === "Shift") {
+                e.preventDefault(); // Stop spacebar scrolling windows
+            }
+        });
+        window.addEventListener("keyup", (e) => {
+            keys[e.key] = false;
+        });
+
+        // Entity Archetype Class
+        class Entity {
+            constructor(id, name, classType, isBot = false) {
+                this.id = id;
+                this.name = name;
+                this.classType = classType;
+                this.isBot = isBot;
+                
+                const profile = CLASS_PROFILES[classType];
+                this.maxHp = profile.maxHp;
+                this.hp = this.maxHp;
+                this.baseSpeed = profile.speed;
+                this.baseDamage = profile.baseDamage;
+                this.attackCdDuration = profile.attackCd;
+                this.specialCdDuration = profile.specialCd;
+                this.specialDuration = profile.specialDuration;
+
+                this.radius = 14;
+                this.x = 0;
+                this.y = 0;
+                this.angle = 0; // Vector heading in radians
+
+                // Combat Timers
+                this.lastAttackTime = 0;
+                this.lastSpecialTime = 0;
+                this.specialActiveUntil = 0;
+
+                // Status Trackers
+                this.kills = 0;
+                this.deaths = 0;
+                this.isDead = false;
+
+                // Simple Bot AI state variables
+                this.botTarget = null;
+                this.botNextDecisionTime = 0;
+                this.botMoveX = 0;
+                this.botMoveY = 0;
+
+                this.spawnRandomly();
+            }
+
+            spawnRandomly() {
+                let valid = false;
+                while(!valid) {
+                    const tileX = Math.floor(Math.random() * (MAP_COLS - 2)) + 1;
+                    const tileY = Math.floor(Math.random() * (MAP_ROWS - 2)) + 1;
+                    if(MAP[tileY][tileX] === 0) {
+                        this.x = tileX * TILE_SIZE + TILE_SIZE/2;
+                        this.y = tileY * TILE_SIZE + TILE_SIZE/2;
+                        valid = true;
+                    }
+                }
+                this.hp = this.maxHp;
+                this.isDead = false;
+                this.specialActiveUntil = 0;
+            }
+
+            get speed() {
+                // Rogue runs fast while Cloaked, Barbarian runs fast while Enraged
+                let speedMod = 1;
+                if (this.isSpecialActive()) {
+                    if (this.classType === "ROGUE") speedMod = 1.35;
+                    if (this.classType === "BARBARIAN") speedMod = 1.5;
+                }
+                return this.baseSpeed * speedMod;
+            }
+
+            get damage() {
+                let damageMod = 1;
+                if (this.isSpecialActive() && this.classType === "BARBARIAN") {
+                    damageMod = 1.6; // Rage gives heavy damage boost
+                }
+                return this.baseDamage * damageMod;
+            }
+
+            isSpecialActive() {
+                return Date.now() < this.specialActiveUntil;
+            }
+
+            update(now) {
+                if (this.isDead) return;
+
+                let moveX = 0;
+                let moveY = 0;
+
+                if (!this.isBot) {
+                    // Manual Input parsing
+                    if (keys["w"] || keys["ArrowUp"]) moveY -= 1;
+                    if (keys["s"] || keys["ArrowDown"]) moveY += 1;
+                    if (keys["a"] || keys["ArrowLeft"]) moveX -= 1;
+                    if (keys["d"] || keys["ArrowRight"]) moveX += 1;
+
+                    // Heading direction tracking based on keyboard layout
+                    if (moveX !== 0 || moveY !== 0) {
+                        this.angle = Math.atan2(moveY, moveX);
+                    }
+
+                    // Direct Action Checks
+                    if (keys[" "]) {
+                        this.performAttack(now);
+                    }
+                    if (keys["Shift"]) {
+                        this.performSpecial(now);
+                    }
+                } else {
+                    // Primitive Simulation AI Routine
+                    if (now > this.botNextDecisionTime) {
+                        this.botNextDecisionTime = now + 400 + Math.random() * 600;
+                        
+                        // Look for closest targetable opponent
+                        let closest = null;
+                        let minDist = 999999;
+                        entities.forEach(e => {
+                            if (e.id !== this.id && !e.isDead) {
+                                // Rogue is invisible if special active
+                                if (e.classType === "ROGUE" && e.isSpecialActive()) return;
+
+                                const d = Math.hypot(e.x - this.x, e.y - this.y);
+                                if (d < minDist) {
+                                    minDist = d;
+                                    closest = e;
+                                }
+                            }
+                        });
+
+                        this.botTarget = closest;
+
+                        if (this.botTarget && minDist < 350) {
+                            // Track towards player / enemy directly
+                            const targetAngle = Math.atan2(this.botTarget.y - this.y, this.botTarget.x - this.x);
+                            this.angle = targetAngle;
+                            this.botMoveX = Math.cos(targetAngle);
+                            this.botMoveY = Math.sin(targetAngle);
+
+                            // Trigger attack mechanics if close enough
+                            if (minDist < (this.classType === "ARCHER" ? 250 : 60)) {
+                                this.performAttack(now);
+                            }
+                            // Randomly use special mechanics
+                            if (minDist < 120 && Math.random() < 0.35) {
+                                this.performSpecial(now);
+                            }
+                        } else {
+                            // Passive Roaming
+                            if (Math.random() < 0.4) {
+                                const randAngle = Math.random() * Math.PI * 2;
+                                this.angle = randAngle;
+                                this.botMoveX = Math.cos(randAngle);
+                                this.botMoveY = Math.sin(randAngle);
+                            } else if (Math.random() < 0.2) {
+                                this.botMoveX = 0;
+                                this.botMoveY = 0;
+                            }
+                        }
+                    }
+
+                    moveX = this.botMoveX;
+                    moveY = this.botMoveY;
+                }
+
+                // Vector Normalization
+                if (moveX !== 0 && moveY !== 0) {
+                    const length = Math.hypot(moveX, moveY);
+                    moveX /= length;
+                    moveY /= length;
+                }
+
+                // Tick Position Movement + Collision Checking
+                if (moveX !== 0 || moveY !== 0) {
+                    const nextX = this.x + moveX * this.speed;
+                    const nextY = this.y + moveY * this.speed;
+
+                    // Resolve sliding collision independently across coordinate planes
+                    if (!this.checkWallCollision(nextX, this.y)) {
+                        this.x = nextX;
+                    }
+                    if (!this.checkWallCollision(this.x, nextY)) {
+                        this.y = nextY;
+                    }
+                }
+            }
+
+            checkWallCollision(px, py) {
+                // Evaluate all 4 corners bounding area circle box
+                const checkPoints = [
+                    {x: px - this.radius, y: py - this.radius},
+                    {x: px + this.radius, y: py - this.radius},
+                    {x: px - this.radius, y: py + this.radius},
+                    {x: px + this.radius, y: py + this.radius}
+                ];
+
+                for (let pt of checkPoints) {
+                    const tx = Math.floor(pt.x / TILE_SIZE);
+                    const ty = Math.floor(pt.y / TILE_SIZE);
+                    
+                    if (tx < 0 || tx >= MAP_COLS || ty < 0 || ty >= MAP_ROWS) return true;
+                    if (MAP[ty][tx] === 1) return true;
+                }
+                return false;
+            }
+
+            performAttack(now) {
+                if (now < this.lastAttackTime + this.attackCdDuration) return;
+                this.lastAttackTime = now;
+
+                if (this.classType === "ARCHER") {
+                    // Ranged attack style: spawn a fast-moving directional projectile
+                    projectles.push({
+                        id: nextEntityId++,
+                        ownerId: this.id,
+                        x: this.x + Math.cos(this.angle) * (this.radius + 5),
+                        y: this.y + Math.sin(this.angle) * (this.radius + 5),
+                        vx: Math.cos(this.angle) * 8,
+                        vy: Math.sin(this.angle) * 8,
+                        damage: this.damage,
+                        radius: 4,
+                        color: CLASS_PROFILES[this.classType].color
+                    });
+
+                    // Light visual flash particle at bow tip
+                    spawnBurstParticles(this.x + Math.cos(this.angle)*20, this.y + Math.sin(this.angle)*20, CLASS_PROFILES[this.classType].color, 3);
+                } else {
+                    // Melee attack style: sweeping short-range frontal arc
+                    const reach = 45;
+                    const sweepAngle = 1.1; // Total arc coverage around forward angle
+                    
+                    // Spawn swing visual particle animation
+                    particles.push({
+                        type: 'swipe',
+                        x: this.x,
+                        y: this.y,
+                        angle: this.angle,
+                        color: CLASS_PROFILES[this.classType].color,
+                        duration: 150,
+                        expiresAt: now + 150
+                    });
+
+                    entities.forEach(target => {
+                        if (target.id === this.id || target.isDead) return;
+
+                        const dx = target.x - this.x;
+                        const dy = target.y - this.y;
+                        const dist = Math.hypot(dx, dy);
+
+                        if (dist <= reach + target.radius) {
+                            let targetAngle = Math.atan2(dy, dx);
+                            let diff = targetAngle - this.angle;
+                            
+                            // Normalize difference range to [-PI, PI]
+                            while (diff < -Math.PI) diff += Math.PI * 2;
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+
+                            if (Math.abs(diff) <= sweepAngle / 2) {
+                                target.takeDamage(this.damage, this, now);
+                            }
+                        }
+                    });
+                }
+            }
+
+            performSpecial(now) {
+                if (now < this.lastSpecialTime + this.specialCdDuration) return;
+                this.lastSpecialTime = now;
+                this.specialActiveUntil = now + this.specialDuration;
+
+                // Archer's dynamic burst volley special attack
+                if (this.classType === "ARCHER") {
+                    // Fires a massive spreading ring of 12 arrows outward
+                    const arrowCount = 12;
+                    for (let i = 0; i < arrowCount; i++) {
+                        const a = this.angle + (i * (Math.PI * 2 / arrowCount));
+                        projectles.push({
+                            id: nextEntityId++,
+                            ownerId: this.id,
+                            x: this.x + Math.cos(a) * (this.radius + 5),
+                            y: this.y + Math.sin(a) * (this.radius + 5),
+                            vx: Math.cos(a) * 7,
+                            vy: Math.sin(a) * 7,
+                            damage: this.damage,
+                            radius: 5,
+                            color: "#f1c40f" // Gold dynamic explosive arrows
+                        });
+                    }
+                    spawnBurstParticles(this.x, this.y, "#f1c40f", 16);
+                } else {
+                    // Spawn generic aura flash for melee specialties
+                    spawnBurstParticles(this.x, this.y, "#ffffff", 10);
+                }
+            }
+
+            takeDamage(amount, attacker, now) {
+                if (this.isDead) return;
+
+                // Knight Frontal Block evaluation
+                if (this.classType === "KNIGHT" && this.isSpecialActive()) {
+                    const incomingAngle = Math.atan2(attacker.y - this.y, attacker.x - this.x);
+                    let diff = incomingAngle - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+
+                    // Perfect block if enemy is within front 160 degree window
+                    if (Math.abs(diff) < 1.4) {
+                        spawnBurstParticles(this.x + Math.cos(this.angle)*15, this.y + Math.sin(this.angle)*15, "#7f8c8d", 5);
+                        return; // Zero tracking damage received
+                    }
+                }
+
+                this.hp -= amount;
+                
+                // Spawn blood splatter particles
+                spawnBurstParticles(this.x, this.y, "#e74c3c", 6);
+
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    this.isDead = true;
+                    this.deaths++;
+                    attacker.kills++;
+
+                    pushKillFeed(attacker.name, this.name);
+
+                    if (!this.isBot) {
+                        // Display internal overlay prompt
+                        deathInfo.textContent = `You were crushed by ${attacker.name} (${attacker.classType})`;
+                        respawnOverlay.classList.remove("hidden");
+                    }
+                }
+            }
+
+            draw() {
+                if (this.isDead) return;
+
+                // Completely fade out rendering pipeline if local player is under Rogue Shroud
+                if (this.classType === "ROGUE" && this.isSpecialActive()) {
+                    if (localPlayer && localPlayer.id !== this.id) {
+                        return; // Hidden from enemy rendering entirely
+                    }
+                    ctx.globalAlpha = 0.3; // Half transparent to yourself
+                }
+
+                // Draw Shield bubble indicator if Knight Shield is active
+                if (this.classType === "KNIGHT" && this.isSpecialActive()) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 6, 0, Math.PI*2);
+                    ctx.strokeStyle = "rgba(52, 152, 219, 0.6)";
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                }
+
+                // Draw Enraged aura ring if Barbarian Special is active
+                if (this.classType === "BARBARIAN" && this.isSpecialActive()) {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius + 4, 0, Math.PI*2);
+                    ctx.strokeStyle = "rgba(230, 126, 34, 0.7)";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+
+                // Core Body Render circle
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = CLASS_PROFILES[this.classType].color;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "#fff";
+                ctx.stroke();
+
+                // Directional Face Pointer
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + Math.cos(this.angle) * (this.radius + 6), this.y + Math.sin(this.angle) * (this.radius + 6));
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Overhead text rendering
+                ctx.globalAlpha = 1.0;
+                ctx.font = "12px monospace";
+                ctx.fillStyle = "#fff";
+                ctx.textAlign = "center";
+                ctx.fillText(this.name, this.x, this.y - this.radius - 14);
+
+                // Inline Healthbar
+                const hbW = 28;
+                const hbH = 4;
+                const hbX = this.x - hbW/2;
+                const hbY = this.y - this.radius - 8;
+                ctx.fillStyle = "#555";
+                ctx.fillRect(hbX, hbY, hbW, hbH);
+                ctx.fillStyle = "#2ecc71";
+                ctx.fillRect(hbX, hbY, hbW * (this.hp / this.maxHp), hbH);
+            }
+        }
+
+        function spawnBurstParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = 1 + Math.random() * 3;
+                particles.push({
+                    type: 'spark',
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    color: color,
+                    radius: 2 + Math.random() * 2,
+                    expiresAt: Date.now() + 200 + Math.random()*300
+                });
+            }
+        }
+
+        function pushKillFeed(killer, victim) {
+            killFeedQueue.push({
+                msg: `${killer} ⚔️ ${victim}`,
+                expiresAt: Date.now() + 4000
+            });
+            renderKillFeed();
+        }
+
+        function renderKillFeed() {
+            const container = document.getElementById("kill-feed");
+            container.innerHTML = "";
+            killFeedQueue.forEach(item => {
+                const d = document.createElement("div");
+                d.className = "kill-msg";
+                d.innerText = item.msg;
+                container.appendChild(d);
+            });
+        }
+
+        function updateHUD(now) {
+            if(!localPlayer) return;
+
+            hudName.textContent = localPlayer.name;
+            hudClass.textContent = localPlayer.classType;
+            hudHpText.textContent = `${localPlayer.hp}/${localPlayer.maxHp}`;
+            hudHpFill.style.width = `${(localPlayer.hp / localPlayer.maxHp) * 100}%`;
+            hudKills.textContent = localPlayer.kills;
+            hudDeaths.textContent = localPlayer.deaths;
+
+            if (localPlayer.isSpecialActive()) {
+                hudCd.textContent = "ACTIVE";
+                hudCd.style.color = "#2ecc71";
+            } else {
+                const timePassed = now - localPlayer.lastSpecialTime;
+                if(timePassed >= localPlayer.specialCdDuration) {
+                    hudCd.textContent = "Ready (Shift)";
+                    hudCd.style.color = "#f1c40f";
+                } else {
+                    const sec = ((localPlayer.specialCdDuration - timePassed) / 1000).toFixed(1);
+                    hudCd.textContent = `${sec}s`;
+                    hudCd.style.color = "#e74c3c";
+                }
+            }
+
+            // High Score Sorting
+            const sorted = [...entities].sort((a,b) => b.kills - a.kills);
+            lbEntries.innerHTML = "";
+            sorted.slice(0, 5).forEach(e => {
+                const row = document.createElement("div");
+                row.className = `lb-entry ${e.id === localPlayer.id ? 'self' : ''}`;
+                row.innerHTML = `<span>${e.name}</span><span>${e.kills}</span>`;
+                lbEntries.appendChild(row);
+            });
+        }
+
+        function drawMap() {
+            for(let r=0; r<MAP_ROWS; r++) {
+                for(let c=0; c<MAP_COLS; c++) {
+                    if(MAP[r][c] === 1) {
+                        ctx.fillStyle = "#2c3e50";
+                        ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = "#34495e";
+                        ctx.strokeRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = "#1e1e1e";
+                        ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+        }
+
+        // Main Simulation Engine Core Loop 
+        function loop() {
+            const now = Date.now();
+
+            // Clear visual artifact buffer
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+
+            // Filter out expired components
+            killFeedQueue = killFeedQueue.filter(item => now < item.expiresAt);
+            particles = particles.filter(p => now < p.expiresAt);
+
+            // System updates
+            entities.forEach(e => e.update(now));
+
+            // Projectile Arrow movement & hit registration logic
+            for (let i = projectles.length - 1; i >= 0; i--) {
+                let p = projectles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // Map Wall Intersection Check
+                let tx = Math.floor(p.x / TILE_SIZE);
+                let ty = Math.floor(p.y / TILE_SIZE);
+                if (tx < 0 || tx >= MAP_COLS || ty < 0 || ty >= MAP_ROWS || MAP[ty][tx] === 1) {
+                    projectles.splice(i, 1);
+                    continue;
+                }
+
+                // Entity Hit Intersection Check
+                let hitSomething = false;
+                for (let e of entities) {
+                    if (e.id === p.ownerId || e.isDead) continue;
+                    
+                    // Ignore Cloaked Rogues
+                    if (e.classType === "ROGUE" && e.isSpecialActive()) continue;
+
+                    let dist = Math.hypot(e.x - p.x, e.y - p.y);
+                    if (dist <= e.radius + p.radius) {
+                        let attacker = entities.find(ent => ent.id === p.ownerId);
+                        e.takeDamage(p.damage, attacker || e, now);
+                        hitSomething = true;
+                        break;
+                    }
+                }
+
+                if (hitSomething) {
+                    projectles.splice(i, 1);
+                }
+            }
+
+            // Draw Layer Hierarchy
+            drawMap();
+
+            // Projectile Rendering
+            projectles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+            });
+
+            // Special Effects Drawing
+            particles.forEach(p => {
+                ctx.save();
+                if(p.type === 'spark') {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                    p.x += p.vx;
+                    p.y += p.vy;
+                } else if(p.type === 'swipe') {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 45, p.angle - 0.5, p.angle + 0.5);
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            // Active Actors Drawing
+            entities.forEach(e => e.draw());
+
+            // Interface Hud sync refresh
+            updateHUD(now);
+
+            requestAnimationFrame(loop);
+        }
+
+        // Match Init Management
+        function initGame() {
+            // Assign map selected in lobby prior to spawning entities
+            MAP = MAPS[selectedMapIndex];
+
+            entities = [];
+            projectles = [];
+            particles = [];
+
+            const pName = playerNameInput.value.trim() || "Hero";
+            localPlayer = new Entity(nextEntityId++, pName, chosenClassType, false);
+            entities.push(localPlayer);
+
+            // Seed Simulation Bots in Arena
+            const botClasses = ["KNIGHT", "ROGUE", "BARBARIAN", "ARCHER"];
+            const botNames = ["Arthur", "Shadow", "Grom", "Legolas", "Boric", "Slayer", "Robin"];
+            
+            for(let i=0; i<5; i++) {
+                const bName = botNames[i % botNames.length] + " [Bot]";
+                const bClass = botClasses[Math.floor(Math.random() * botClasses.length)];
+                entities.push(new Entity(nextEntityId++, bName, bClass, true));
+            }
+
+            lobbyOverlay.classList.add("hidden");
+            respawnOverlay.classList.add("hidden");
+        }
+
+        btnJoin.addEventListener("click", () => {
+            initGame();
+        });
+
+        btnRespawn.addEventListener("click", () => {
+            if(localPlayer) {
+                localPlayer.spawnRandomly();
+                respawnOverlay.classList.add("hidden");
+            }
+        });
+
+        // Run Render loop framework
+        requestAnimationFrame(loop);
+
+    </script>
+</body>
+</html>
