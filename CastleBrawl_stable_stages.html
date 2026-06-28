@@ -251,6 +251,23 @@
   }
   .lobbySection { margin:10px 0; }
   .lobbyLabel { color:#a08040; font-size:0.85em; margin-bottom:4px; }
+  /* Map picker — left/right arrow nav + single preview canvas */
+  #mapPicker {
+    display:flex; align-items:center; justify-content:center; gap:10px; margin-top:6px;
+  }
+  .arrowBtn {
+    background:none; border:2px solid #8b6030; color:#f0d080;
+    font-family:'Georgia',serif; font-size:1.5em; line-height:1;
+    width:38px; height:38px; border-radius:4px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:border-color 0.15s, background 0.15s;
+    flex-shrink:0; user-select:none;
+  }
+  .arrowBtn:hover  { border-color:#f0d080; background:rgba(200,150,60,0.15); }
+  .arrowBtn:active { background:rgba(200,150,60,0.35); }
+  #mapPreviewBox   { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  #mapPreviewCanvas { border:1px solid #8b6030; border-radius:3px; display:block; }
+  #mapPreviewName  { font-size:0.9em; color:#f0d080; letter-spacing:0.04em; }
 </style>
 </head>
 <body>
@@ -280,6 +297,18 @@
       <div class="classBtn" data-class="archer" onclick="selectClass(this)">
         <span class="classEmoji">🏹</span>Archer<br><small>HP: Low · Fast</small>
       </div>
+    </div>
+  </div>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">CHOOSE YOUR BATTLEFIELD</div>
+    <div id="mapPicker">
+      <button class="arrowBtn" onclick="cycleMap(-1)">&#9664;</button>
+      <div id="mapPreviewBox">
+        <canvas id="mapPreviewCanvas" width="180" height="100"></canvas>
+        <div id="mapPreviewName">Castle Courtyard</div>
+      </div>
+      <button class="arrowBtn" onclick="cycleMap(1)">&#9654;</button>
     </div>
   </div>
 
@@ -362,7 +391,7 @@ const CLASS_DEFS = {
   knight:    { speed:120, maxHp:120, dmg:25, attackRange:52,  attackCooldown:0.7,  rollSpeed:200, color:'#8899cc', emoji:'🛡️', symbol:'K', abilCd: 10.0 },
   rogue:     { speed:200, maxHp:80,  dmg:20, attackRange:44,  attackCooldown:0.45, rollSpeed:300, color:'#887755', emoji:'🗡️', symbol:'R', abilCd: 12.0 },
   barbarian: { speed:155, maxHp:100, dmg:35, attackRange:56,  attackCooldown:0.85, rollSpeed:230, color:'#cc7733', emoji:'🪓', symbol:'B', abilCd: 8.0  },
-  archer:    { speed:185, maxHp:70,  dmg:22, attackRange:150, attackCooldown:0.55, rollSpeed:280, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
+  archer:    { speed:185, maxHp:70,  dmg:22, attackRange:150, attackCooldown:0.35, rollSpeed:280, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
 };
 
 const MAPS = [[
@@ -458,6 +487,56 @@ let CANVAS_H;
 
 let MAP;
 
+// ===========================
+//  MAP SELECTION
+// ===========================
+let selectedMap = 0;
+
+const MAP_NAMES = ['Castle Courtyard', 'Great Hall', 'River Crossing'];
+
+// Draw the currently-selected map into the single lobby preview canvas
+function drawMapPreview() {
+  const canvas = document.getElementById('mapPreviewCanvas');
+  const nameEl = document.getElementById('mapPreviewName');
+  if (!canvas) return;
+  const mapRows = MAPS[selectedMap];
+  const cW = canvas.width, cH = canvas.height;
+  const mW = mapRows[0].length, mH = mapRows.length;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, cW, cH);
+  const TILE_CLR = { 0:'#453318', 1:'#1e160a', 2:'#3a2a18', 3:'#6a5030', 4:'#1a3550' };
+  const sx = cW / mW, sy = cH / mH;
+  for (let ty = 0; ty < mH; ty++) {
+    for (let tx = 0; tx < mW; tx++) {
+      const t = parseInt(mapRows[ty][tx], 10);
+      ctx.fillStyle = TILE_CLR[t] || '#453318';
+      ctx.fillRect(Math.floor(tx * sx), Math.floor(ty * sy),
+                   Math.ceil(sx) + 1, Math.ceil(sy) + 1);
+    }
+  }
+  // Faint gold dots at the four corner spawn anchors
+  const anchors = [
+    {x:3,y:3},{x:mW-4,y:3},{x:3,y:mH-4},{x:mW-4,y:mH-4}
+  ];
+  ctx.fillStyle = '#f0d08099';
+  anchors.forEach(a => {
+    ctx.beginPath();
+    ctx.arc(a.x * sx + sx/2, a.y * sy + sy/2, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  });
+  if (nameEl) nameEl.textContent = MAP_NAMES[selectedMap];
+}
+
+// Step through maps with the ◀ ▶ buttons
+function cycleMap(dir) {
+  selectedMap = (selectedMap + dir + MAPS.length) % MAPS.length;
+  drawMapPreview();
+}
+
+// Draw the initial preview once the DOM is ready
+window.addEventListener('DOMContentLoaded', drawMapPreview);
+if (document.readyState !== 'loading') drawMapPreview();
+
 function chooseMap(choice) {
   MAP_W = MAPS[choice][0].length; 
   MAP_H = MAPS[choice].length;
@@ -466,7 +545,7 @@ function chooseMap(choice) {
 
   MAP = MAPS[choice].map(row => row.split('').map(Number));
 }
-chooseMap(2);
+chooseMap(0); // default; overridden in joinGame() with player's selection
 
 function tileBlocks(tx,ty) {
   if (tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return true;
@@ -494,9 +573,10 @@ const floaters = [];
 const swings = [];
 const particles = [];
 
-// NEW STATE: Map item loot and archer explosive arrow tracking
+// NEW STATE: Map item loot, archer normal arrows, and explosive bomb arrows
 const items = [];
-const bombArrows = [];
+const arrows = [];       // archer normal arrows (no explosion)
+const bombArrows = [];  // archer ability: bomb arrows
 let itemSpawnTimer = 0;
 
 const keys = {};
@@ -620,6 +700,10 @@ function selectClass(el) {
 function joinGame() {
   const inp = document.getElementById('nameInput').value.trim();
   if (inp) myName = inp;
+
+  // Apply the map the player picked in the lobby
+  chooseMap(selectedMap);
+  SPAWN_POINTS = generateValidSpawnPoints(MAP);
 
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('gameWrap').style.display = 'block';
@@ -857,6 +941,9 @@ function update(dt) {
   // NEW SYSTEM: Manage active flying/fuse tracking for archer bomb arrows
   updateBombArrows(dt);
 
+  // NEW SYSTEM: Advance normal archer arrow projectiles
+  updateArrows(dt);
+
   updateParticles(dt);
   updateFloaters(dt);
   updateSwings(dt);
@@ -986,6 +1073,24 @@ function collides(x, y, r) {
 
 function doAttack(p) {
   p.attackTimer = p.attackCooldown;
+
+  // Archer fires a normal (non-explosive) arrow instead of an instant melee swing
+  if (p.cls === 'archer') {
+    arrows.push({
+      x: p.x,
+      y: p.y,
+      vx: Math.cos(p.angle) * 420,  // fast straight flight
+      vy: Math.sin(p.angle) * 420,
+      angle: p.angle,
+      dmg: p.dmg,
+      ownerId: p.id,
+      ownerName: p.name,
+      range: p.attackRange,        // max travel distance before despawn
+      travelled: 0,
+      life: 1.2                    // hard timeout in seconds
+    });
+    return; // no melee swing or arc for archer normal attack
+  }
 
   // NEW MECHANIC: If rogue chooses to swing/engage weapon, immediately end stealth window early
   if (p.cls === 'rogue' && p.abilTimer > 0) {
@@ -1128,6 +1233,84 @@ function updateBombArrows(dt) {
 }
 
 // ===========================
+//  NORMAL ARROW PHYSICS
+// ===========================
+function updateArrows(dt) {
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    const a = arrows[i];
+    a.life -= dt;
+
+    const stepX = a.vx * dt;
+    const stepY = a.vy * dt;
+
+    // Wall collision: stop and despawn on impact
+    const nextX = a.x + stepX;
+    const nextY = a.y + stepY;
+    const hitWall = tileBlocks(Math.floor(nextX / TILE), Math.floor(nextY / TILE));
+
+    if (hitWall || a.life <= 0) {
+      // Little puff of dust on wall hit
+      if (hitWall) {
+        for (let k = 0; k < 3; k++) {
+          const ang = Math.random() * Math.PI * 2;
+          particles.push({ x: a.x, y: a.y, vx: Math.cos(ang)*40, vy: Math.sin(ang)*40,
+                           life: 0.25, color: '#c8a070', size: 2 });
+        }
+      }
+      arrows.splice(i, 1);
+      continue;
+    }
+
+    a.x = nextX;
+    a.y = nextY;
+    a.travelled += Math.sqrt(stepX*stepX + stepY*stepY);
+
+    // Hit detection against all players
+    for (const other of Object.values(players)) {
+      if (other.id === a.ownerId || other.dead) continue;
+      if (other.cls === 'rogue' && other.abilTimer > 0) continue; // stealthed
+
+      const dx = other.x - a.x;
+      const dy = other.y - a.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 16) continue; // hitbox radius 16px
+
+      // Apply defences
+      if (other.cls === 'knight' && other.abilTimer > 0) {
+        spawnDamageFloat(other.x, other.y - 15, 'BLOCKED', '#8899cc');
+        arrows.splice(i, 1);
+        break;
+      }
+
+      let dmg = a.dmg;
+      if (other.cls === 'barbarian' && other.abilTimer > 0) dmg = Math.round(dmg * 1.2);
+
+      other.hp = Math.max(0, other.hp - dmg);
+      spawnDamageFloat(other.x, other.y - 20, dmg, '#aaffaa');
+      spawnBloodParticles(other.x, other.y);
+
+      if (other.hp <= 0 && !other.dead) {
+        other.dead = true;
+        other.respawnTimer = 4;
+        // Credit kill to arrow owner
+        const owner = players[a.ownerId];
+        if (owner) {
+          owner.kills++;
+          if (a.ownerId === myId) {
+            kills++;
+            showStatus('🏹 You slew ' + other.name + '!');
+          }
+        }
+      }
+
+      // Broadcast the hit so the target client applies damage
+      broadcastAttack([{ id: other.id, dmg }]);
+      arrows.splice(i, 1);
+      break;
+    }
+  }
+}
+
+// ===========================
 //  EFFECTS
 // ===========================
 function spawnDamageFloat(x,y,dmg,color) {
@@ -1262,6 +1445,36 @@ function render() {
     const bobbingOffset = Math.sin(Date.now() / 180) * 3;
     const emojiStr = item.type === 'health' ? '❤️' : '💎';
     ctx.fillText(emojiStr, item.x, item.y + bobbingOffset);
+    ctx.restore();
+  }
+
+  // RENDER: Normal archer arrows — thin streaks with a shaft and head
+  for (const a of arrows) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.angle);
+    // Shaft
+    ctx.strokeStyle = '#c8a050';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(8, 0);
+    ctx.stroke();
+    // Arrowhead triangle
+    ctx.fillStyle = '#e0c060';
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(2, -3);
+    ctx.lineTo(2, 3);
+    ctx.closePath();
+    ctx.fill();
+    // Tail fletching
+    ctx.strokeStyle = '#88aa66';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0); ctx.lineTo(-16, -4);
+    ctx.moveTo(-12, 0); ctx.lineTo(-16,  4);
+    ctx.stroke();
     ctx.restore();
   }
 
