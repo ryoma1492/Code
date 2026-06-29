@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Castle Brawl</title>
+<script src="webxdc.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#1a0f07;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    overflow:hidden;
+    height:100vh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+  #lobby {
+    text-align:center;
+    max-width:480px;
+    padding:24px;
+  }
+  #lobby h1 {
+    font-size:2.4em;
+    color:#f0d080;
+    text-shadow:0 0 12px #c8960060, 2px 2px 4px #000;
+    margin-bottom:6px;
+  }
+  #lobby h2 {
+    font-size:1.1em;
+    color:#c89060;
+    margin-bottom:20px;
+    font-weight:normal;
+  }
+  .hero-banner {
+    font-size:3em;
+    margin:12px 0;
+    text-shadow:2px 2px 8px #000;
+  }
+  .btn {
+    background:linear-gradient(180deg,#8b4513,#5c2a0a);
+    border:2px solid #c8960060;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    font-size:1.1em;
+    padding:10px 28px;
+    cursor:pointer;
+    border-radius:4px;
+    margin:6px;
+    text-shadow:1px 1px 2px #000;
+    transition:all 0.15s;
+  }
+  .btn:hover { background:linear-gradient(180deg,#a0521a,#7a3a10); border-color:#f0d080a0; }
+  .btn:active { transform:scale(0.97); }
+  #nameInput {
+    background:#2a1a0a;
+    border:2px solid #8b6030;
+    color:#f0d080;
+    font-family:'Georgia',serif;
+    font-size:1.1em;
+    padding:8px 14px;
+    border-radius:4px;
+    width:200px;
+    text-align:center;
+    margin:8px;
+    outline:none;
+  }
+  #nameInput:focus { border-color:#f0d080; }
+  #playerCount {
+    color:#a08040;
+    font-size:0.95em;
+    margin-top:12px;
+  }
+  .classBtn {
+    display:inline-block;
+    background:#1e1008;
+    border:2px solid #6b4020;
+    color:#c89060;
+    font-family:'Georgia',serif;
+    padding:8px 14px;
+    cursor:pointer;
+    border-radius:4px;
+    margin:4px;
+    text-align:center;
+    min-width:90px;
+    transition:all 0.15s;
+    font-size:0.9em;
+  }
+  .classBtn:hover { border-color:#f0d080; color:#f0d080; }
+  .classBtn.selected { background:#5c2a0a; border-color:#f0d080; color:#f0d080; }
+  .classEmoji { font-size:1.8em; display:block; }
+  #gameWrap {
+    display:none;
+    position:fixed;
+    inset:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+  }
+  /* FIXED: Targeted only the main canvas ID so it doesn't break the minimap sizing */
+  #canvas {
+    display:block;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    image-rendering:pixelated;
+  }
+  #hud {
+    position:absolute;
+    top:0; left:0; right:0;
+    pointer-events:none;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    padding:8px 12px;
+  }
+  #hpBar {
+    background:#1a0a00;
+    border:2px solid #8b4513;
+    border-radius:6px;
+    width:160px;
+    height:22px;
+    overflow:hidden;
+  }
+  #hpFill {
+    height:100%;
+    background:linear-gradient(90deg,#cc2200,#ff4400);
+    transition:width 0.1s;
+  }
+  #staminaBar {
+    background:#1a0a00;
+    border:2px solid #4a7a20;
+    border-radius:6px;
+    width:120px;
+    height:14px;
+    overflow:hidden;
+    margin-top:4px;
+  }
+  #staminaFill {
+    height:100%;
+    background:linear-gradient(90deg,#3a9a20,#60cc40);
+    transition:width 0.15s;
+  }
+  #killsDisplay {
+    font-size:1.2em;
+    color:#f0d080;
+    text-shadow:1px 1px 3px #000;
+  }
+  #statusMsg {
+    position:absolute;
+    bottom:140px;
+    left:50%;
+    transform:translateX(-50%);
+    color:#f0d080;
+    font-size:1.3em;
+    text-shadow:2px 2px 6px #000;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.3s;
+    white-space:nowrap;
+    z-index: 10;
+  }
+  #touchControls {
+    position:absolute;
+    bottom:0;
+    left:0;
+    right:0;
+    height:0;
+    pointer-events:none;
+  }
+  #joystickZone {
+    position:absolute;
+    width:18vmin;
+    height:18vmin;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    left:calc(10px + env(safe-area-inset-left, 0px));
+    background:rgba(0,0,0,0.18);
+    border:1.5px solid rgba(200,150,60,0.25);
+    border-radius:50%;
+    pointer-events:all;
+    touch-action:none;
+  }
+  #joystickThumb {
+    width:38%;
+    height:38%;
+    background:radial-gradient(#c89060,#8b4513);
+    border:1.5px solid rgba(240,208,128,0.7);
+    border-radius:50%;
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  /* REFACTORED: 3-Button Action Grid Cluster Layout */
+  #actionButtons {
+    position:absolute;
+    display:grid;
+    grid-template-areas: 
+      "abil atk"
+      ".    roll";
+    gap:10px;
+    bottom:calc(10px + env(safe-area-inset-bottom, 0px));
+    right:calc(10px + env(safe-area-inset-right, 0px));
+    pointer-events:all;
+  }
+  #btnAbility { grid-area: abil; border-color: rgba(240,208,128,0.7); }
+  #btnAttack  { grid-area: atk; }
+  #btnRoll    { grid-area: roll; }
+
+  .actionBtn {
+    width:13vmin;
+    height:13vmin;
+    border-radius:50%;
+    border:1.5px solid rgba(240,208,128,0.35);
+    font-size:clamp(1em, 4vmin, 1.8em);
+    background:rgba(0,0,0,0.28);
+    cursor:pointer;
+    touch-action:none;
+    user-select:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .actionBtn:active { background:rgba(200,150,60,0.35); }
+  #minimap {
+    position:absolute;
+    top:60px;
+    right:8px;
+    border:1px solid #8b6030;
+    background:rgba(10,5,0,0.8);
+    z-index: 5;
+  }
+  #respawnOverlay {
+    display:none;
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    align-items:center;
+    justify-content:center;
+    font-size:1.5em;
+    color:#f0d080;
+    text-shadow:2px 2px 6px #000;
+    pointer-events:none;
+    z-index: 20;
+  }
+  .lobbySection { margin:10px 0; }
+  .lobbyLabel { color:#a08040; font-size:0.85em; margin-bottom:4px; }
+  /* Map picker — left/right arrow nav + single preview canvas */
+  #mapPicker {
+    display:flex; align-items:center; justify-content:center; gap:10px; margin-top:6px;
+  }
+  .arrowBtn {
+    background:none; border:2px solid #8b6030; color:#f0d080;
+    font-family:'Georgia',serif; font-size:1.5em; line-height:1;
+    width:38px; height:38px; border-radius:4px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:border-color 0.15s, background 0.15s;
+    flex-shrink:0; user-select:none;
+  }
+  .arrowBtn:hover  { border-color:#f0d080; background:rgba(200,150,60,0.15); }
+  .arrowBtn:active { background:rgba(200,150,60,0.35); }
+  #mapPreviewBox   { display:flex; flex-direction:column; align-items:center; gap:5px; }
+  #mapPreviewCanvas { border:1px solid #8b6030; border-radius:3px; display:block; }
+  #mapPreviewName  { font-size:0.9em; color:#f0d080; letter-spacing:0.04em; }
+  /* Win condition & bot options */
+  .lobbyRow { display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; margin-top:4px; }
+  .lobbyToggle { display:flex; align-items:center; gap:6px; font-size:0.88em; color:#c89060; cursor:pointer; }
+  .lobbyToggle input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:#c89060; }
+  .lobbyNumber { width:48px; background:#2a1a0a; border:1.5px solid #8b6030; color:#f0d080;
+    font-family:'Georgia',serif; font-size:0.95em; padding:3px 6px; border-radius:4px;
+    text-align:center; outline:none; }
+  .lobbyNumber:focus { border-color:#f0d080; }
+  /* End-game overlays */
+  #victoryOverlay, #defeatOverlay {
+    display:none; position:absolute; inset:0; z-index:30;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.75); color:#f0d080; text-align:center;
+    font-family:'Georgia',serif;
+  }
+  #victoryOverlay h2 { font-size:2.2em; text-shadow:0 0 20px #f0d080; margin-bottom:10px; }
+  #defeatOverlay h2  { font-size:2.2em; color:#cc4422; text-shadow:0 0 20px #cc4422; margin-bottom:10px; }
+  .overlayDetail { font-size:1em; color:#c89060; margin-bottom:18px; }
+  /* Timer / lives HUD additions */
+  #matchHud {
+    position:absolute; top:0; left:50%; transform:translateX(-50%);
+    pointer-events:none; display:flex; gap:16px; align-items:center;
+    padding:6px 14px; background:rgba(0,0,0,0.45); border-radius:0 0 8px 8px;
+    font-family:'Georgia',serif; font-size:0.9em; color:#f0d080;
+    text-shadow:1px 1px 3px #000; z-index:6;
+  }
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <div class="hero-banner">⚔️🏰⚔️</div>
+  <h1>Castle Brawl</h1>
+  <h2>Medieval Melee Arena</h2>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">YOUR NAME</div>
+    <input id="nameInput" type="text" maxlength="16" placeholder="Enter name…" autocomplete="off"/>
+  </div>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">CHOOSE YOUR CLASS</div>
+    <div id="classSelector">
+      <div class="classBtn selected" data-class="knight" onclick="selectClass(this)">
+        <span class="classEmoji">🛡️</span>Knight<br><small>HP: High · Slow</small>
+      </div>
+      <div class="classBtn" data-class="rogue" onclick="selectClass(this)">
+        <span class="classEmoji">🗡️</span>Rogue<br><small>HP: Med · Fast</small>
+      </div>
+      <div class="classBtn" data-class="barbarian" onclick="selectClass(this)">
+        <span class="classEmoji">🪓</span>Barb<br><small>HP: Med · Hit+</small>
+      </div>
+      <div class="classBtn" data-class="archer" onclick="selectClass(this)">
+        <span class="classEmoji">🏹</span>Archer<br><small>HP: Low · Fast</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">CHOOSE YOUR BATTLEFIELD</div>
+    <div id="mapPicker">
+      <button class="arrowBtn" onclick="cycleMap(-1)">&#9664;</button>
+      <div id="mapPreviewBox">
+        <canvas id="mapPreviewCanvas" width="180" height="100"></canvas>
+        <div id="mapPreviewName">Castle Courtyard</div>
+      </div>
+      <button class="arrowBtn" onclick="cycleMap(1)">&#9654;</button>
+    </div>
+  </div>
+
+  <div class="lobbySection">
+    <div class="lobbyLabel">MATCH OPTIONS</div>
+    <div class="lobbyRow">
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optBots" onchange="updateBotUi()"> Bots
+      </label>
+      <span id="botCountWrap" style="display:none; align-items:center; gap:4px;">
+        <span style="font-size:0.82em;color:#a08040;">Count:</span>
+        <input class="lobbyNumber" type="number" id="optBotCount" min="1" max="8" value="3">
+      </span>
+    </div>
+    <div class="lobbyRow" style="margin-top:6px;">
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optLives" checked> 3 Lives
+      </label>
+      <label class="lobbyToggle">
+        <input type="checkbox" id="optTimer" checked> 3 min Timer
+      </label>
+    </div>
+  </div>
+
+  <div class="lobbySection">
+    <button class="btn" onclick="joinGame()">⚔️ Enter the Arena</button>
+  </div>
+
+  <div id="playerCount">Waiting for warriors…</div>
+  <div style="color:#6a4020;font-size:0.78em;margin-top:12px;">
+    Arrow keys / WASD to move · Z or Space to attack · X to roll<br>
+    <strong>C key to activate Class Special Ability</strong><br>
+    On mobile: joystick + action cluster buttons
+  </div>
+</div>
+
+<div id="gameWrap">
+  <canvas id="canvas"></canvas>
+
+  <div id="hud">
+    <div>
+      <div style="color:#c89060;font-size:0.75em;margin-bottom:2px;" id="playerNameHud"></div>
+      <div id="hpBar"><div id="hpFill" style="width:100%"></div></div>
+      <div id="staminaBar"><div id="staminaFill" style="width:100%"></div></div>
+    </div>
+    <div id="killsDisplay">⚔️ 0 kills</div>
+  </div>
+
+  <canvas id="minimap" width="80" height="80"></canvas>
+
+  <div id="statusMsg"></div>
+  <div id="respawnOverlay">💀 Defeated! Respawning…</div>
+
+  <!-- Match timer / lives HUD (centre-top) -->
+  <div id="matchHud">
+    <span id="hudLives"></span>
+    <span id="hudTimer"></span>
+  </div>
+
+  <!-- End-game overlays -->
+  <div id="victoryOverlay">
+    <h2>⚔️ Victory! ⚔️</h2>
+    <div class="overlayDetail" id="victoryDetail"></div>
+    <button class="btn" onclick="location.reload()">Return to Lobby</button>
+  </div>
+  <div id="defeatOverlay">
+    <h2>💀 Defeated</h2>
+    <div class="overlayDetail" id="defeatDetail"></div>
+    <button class="btn" onclick="location.reload()">Return to Lobby</button>
+  </div>
+
+  <div id="touchControls">
+    <div id="joystickZone"><div id="joystickThumb"></div></div>
+    <div id="actionButtons">
+      <div class="actionBtn" id="btnAbility">✨</div>
+      <div class="actionBtn" id="btnAttack">⚔️</div>
+      <div class="actionBtn" id="btnRoll">💨</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===========================
+//  WEBXDC POLYFILL (browser fallback for testing)
+// ===========================
+if (!window.webxdc) {
+  const fakeUpdates = [];
+  let fakeSerial = 0;
+  let fakeListener = null;
+  window.webxdc = {
+    selfAddr: 'player1@local',
+    selfName: 'Player1',
+    sendUpdate(u) {
+      fakeSerial++;
+      const upd = { payload: u.payload, serial: fakeSerial };
+      fakeUpdates.push(upd);
+      setTimeout(() => { if (fakeListener) fakeListener(upd); }, 50);
+    },
+    setUpdateListener(fn, serial) {
+      fakeListener = fn;
+      fakeUpdates.filter(u => u.serial > (serial||0)).forEach(u => fn(u));
+      return Promise.resolve();
+    },
+    joinRealtimeChannel() {
+      return {
+        setListener(fn) {},
+        send(data) {},
+        leave() {}
+      };
+    }
+  };
+}
+
+// ===========================
+//  GAME CONSTANTS & CONFIG
+// ===========================
+// REFACTORED: Class configuration updates supporting customized ranges and special cooldown rules
+const CLASS_DEFS = {
+  knight:    { speed:120, maxHp:120, dmg:25, attackRange:52,  attackCooldown:0.7,  rollSpeed:200, color:'#8899cc', emoji:'🛡️', symbol:'K', abilCd: 10.0 },
+  rogue:     { speed:200, maxHp:80,  dmg:20, attackRange:44,  attackCooldown:0.45, rollSpeed:300, color:'#887755', emoji:'🗡️', symbol:'R', abilCd: 12.0 },
+  barbarian: { speed:155, maxHp:100, dmg:35, attackRange:56,  attackCooldown:0.85, rollSpeed:230, color:'#cc7733', emoji:'🪓', symbol:'B', abilCd: 8.0  },
+  archer:    { speed:185, maxHp:70,  dmg:22, attackRange:150, attackCooldown:0.35, rollSpeed:280, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
+};
+
+const MAPS = [[
+    '1111111111111111111111111111111111111111',
+    '1000000000000001111100000000000000000001',
+    '1000300000000000000000000000003000000001',
+    '1000030000002200022000220000300000000001',
+    '1000000000002200022000220000000000000001',
+    '1000000000000000000000000000000000000001',
+    '1111000000000000000000000000000001111001',
+    '1000000003000000000000000003000000000001',
+    '1000000000000004444444000000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1002200000000044444444440000000022000001',
+    '1002200000000044444444440000000022000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1002200000000044444444440000000022000001',
+    '1002200000000044444444440000000022000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000044444444440000000000000001',
+    '1000000000000000000000000000000000000001',
+    '1000000003000000000000000003000000000001',
+    '1111000000000000000000000000000001111001',
+    '1000000000000000000000000000000000000001',
+    '1000300000002200022000220000003000000001',
+    '1000000000000001111100000000000000000001',
+    '1111111111111111111111111111111111111111',
+  ]
+,
+[
+    '11111111111111111111111111111111111111111111111111111111111111111111',
+    '10000000000000000000000000000000000000000000000000000000000000000001',
+    '10000000300000000000010111110000000000001111101000000000000300000001',
+    '10000000000000000000010000010000000000001000001000003000000000000001',
+    '10000000000000300000011111010000000000001011111000000000000000000001',
+    '10000000000000000000000000000000000000000000000000000000000000000001',
+    '10000000000000000000000000000000000000000000000000000000000000000001',
+    '11111111111000000000000000000000000000000000030000000000011111111111',
+    '10000000000000000300000000000022000000000000000000000000000000000001',
+    '10000000000000000000000000000202000000000000000000000000000000000001',
+    '10000000000000000000000000000000000000020200000000000000000003000001',
+    '10000000000000000001000000000000000000022000000000000000000000000001',
+    '10000000000000000001000000444440000000000000000000000000000000000001',
+    '10000220000000300001000000444440000000000000000100030000000000000001',
+    '10000000000000000001000000444440000000000000000100000000000022000001',
+    '10000000000300000001000000444440000000030000000100000000000000000001',
+    '10000300000000000001000000000000000000000000000100000000000000000001',
+    '10000000000000000001000000000000000000000000000100000000003000000001',
+    '10000000000000000001000000000000000000000000000100000000000000000001',
+    '11111111111111111111111111111111111111111111111111111111111111111111'
+  ]
+,
+[
+    '1111111111111111111111111111111111111111111111111111111111111111111',
+    '1000000000000440010000000000000000000000000000000000000000000000001',
+    '1000000030000440010000000000000000000000000000000001111110000000001',
+    '1000000000000440010001000000000000000000000001111111000000000000001',
+    '1000000000000440010001111111110000000001111111000000000000000000001',
+    '1000000000000440010000000000000000000000000000000000000000022000001',
+    '1000000000000440010000000000000000000000000000000000000000022000001',
+    '1000300000000440011111111111110000000001111111111111110000000000001',
+    '1000000000000440000000000000000000000000000000000011000000000000001',
+    '1000000000000440000000000000000000000000000000000001100000000000001',
+    '1000000000000444444444444444442000000024444440003000110000000000001',
+    '1000000000000004444444444444442000000024444444000000011000000000001',
+    '1000000000000000000000000000000000000000000044440000001110000000001',
+    '1000022000000030000000000000000000000000000000444000000011000000001',
+    '1000000000000000000000000000000000000000000000004440003000002200001',
+    '1000000000000000000000000000000000000030000000002222200000000000001',
+    '1000030000000000000000003000220000000000000000000000000000000000001',
+    '1000000000000000000000000000222000000000000000000000000000000000001',
+    '1000000000111100000000000000220000000000000000000000000003000000001',
+    '1000000000000100000000000000000000000000000000002222200000000000001',
+    '1000030000000100000000003000000000000000000000000444000000000000001',
+    '1000000000000100000000000000000000000000000000000444000000000300001',
+    '1111111111111111111111111111111111111111111111111444111111111111111'
+  ]];
+
+// ===========================
+//  GAME CONSTANTS & CONFIG
+// ===========================
+const TILE = 32;
+let MAP_W; 
+let MAP_H;
+let CANVAS_W;
+let CANVAS_H;
+
+let MAP;
+
+// ===========================
+//  MAP SELECTION
+// ===========================
+let selectedMap = 0;
+
+const MAP_NAMES = ['Castle Courtyard', 'Great Hall', 'River Crossing'];
+
+// Draw the currently-selected map into the single lobby preview canvas
+function drawMapPreview() {
+  const canvas = document.getElementById('mapPreviewCanvas');
+  const nameEl = document.getElementById('mapPreviewName');
+  if (!canvas) return;
+  const mapRows = MAPS[selectedMap];
+  const cW = canvas.width, cH = canvas.height;
+  const mW = mapRows[0].length, mH = mapRows.length;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, cW, cH);
+  const TILE_CLR = { 0:'#453318', 1:'#1e160a', 2:'#3a2a18', 3:'#6a5030', 4:'#1a3550' };
+  const sx = cW / mW, sy = cH / mH;
+  for (let ty = 0; ty < mH; ty++) {
+    for (let tx = 0; tx < mW; tx++) {
+      const t = parseInt(mapRows[ty][tx], 10);
+      ctx.fillStyle = TILE_CLR[t] || '#453318';
+      ctx.fillRect(Math.floor(tx * sx), Math.floor(ty * sy),
+                   Math.ceil(sx) + 1, Math.ceil(sy) + 1);
+    }
+  }
+  // Faint gold dots at the four corner spawn anchors
+  const anchors = [
+    {x:3,y:3},{x:mW-4,y:3},{x:3,y:mH-4},{x:mW-4,y:mH-4}
+  ];
+  ctx.fillStyle = '#f0d08099';
+  anchors.forEach(a => {
+    ctx.beginPath();
+    ctx.arc(a.x * sx + sx/2, a.y * sy + sy/2, 2.5, 0, Math.PI*2);
+    ctx.fill();
+  });
+  if (nameEl) nameEl.textContent = MAP_NAMES[selectedMap];
+}
+
+// Step through maps with the ◀ ▶ buttons
+function cycleMap(dir) {
+  selectedMap = (selectedMap + dir + MAPS.length) % MAPS.length;
+  drawMapPreview();
+}
+
+// Draw the initial preview once the DOM is ready
+window.addEventListener('DOMContentLoaded', drawMapPreview);
+if (document.readyState !== 'loading') drawMapPreview();
+
+function chooseMap(choice) {
+  MAP_W = MAPS[choice][0].length; 
+  MAP_H = MAPS[choice].length;
+  CANVAS_W = MAP_W * TILE;
+  CANVAS_H = MAP_H * TILE;
+
+  MAP = MAPS[choice].map(row => row.split('').map(Number));
+}
+chooseMap(0); // default; overridden in joinGame() with player's selection
+
+function tileBlocks(tx,ty) {
+  if (tx<0||ty<0||tx>=MAP_W||ty>=MAP_H) return true;
+  const t = MAP[ty][tx];
+  return t===1||t===2||t===3||t===4;
+}
+
+// ===========================
+//  GAME STATE
+// ===========================
+let myId = window.webxdc.selfAddr;
+let myName = window.webxdc.selfName || 'Warrior';
+let myClass = 'knight';
+
+const players = {}; 
+let myPlayer = null;
+let kills = 0;
+let dead = false;
+let respawnTimer = 0;
+
+let rtChannel = null;
+let lastSerial = 0;
+
+// ── MATCH OPTIONS (read from lobby controls on joinGame) ──────────
+let optBots      = false;
+let optBotCount  = 3;
+let optLives     = true;
+let optTimer     = true;
+
+// ── MATCH STATE ───────────────────────────────────────────────────
+const MATCH_DURATION = 3 * 60; // 3 minutes in seconds
+let matchTimeLeft  = MATCH_DURATION;
+let matchOver      = false;
+let myLivesLeft    = 3;
+
+// Bot AI state — purely local, not synced
+const bots = [];
+const BOT_NAMES   = ['Cedric','Aldric','Wulfric','Osric','Godwin','Leofwin','Edwulf','Brunhild'];
+const BOT_CLASSES = ['knight','rogue','barbarian','archer'];
+
+function updateBotUi() {
+  const checked = document.getElementById('optBots').checked;
+  document.getElementById('botCountWrap').style.display = checked ? 'flex' : 'none';
+}
+
+const floaters = [];
+const swings = [];
+const particles = [];
+
+// NEW STATE: Map item loot, archer normal arrows, and explosive bomb arrows
+const items = [];
+const arrows = [];
+const bombArrows = [];
+let itemSpawnTimer = 0;
+
+const keys = {};
+let joyX = 0, joyY = 0;
+let camX = 0, camY = 0;
+
+// ── NETWORK TIMING ─────────────────────────────────────────────────
+// Fixed-rate transmission tick (every 100 ms = 10 Hz reliable, ~20 Hz RT)
+const NET_TICK_MS   = 100;        // sendUpdate cadence
+const RT_TICK_MS    = 50;         // realtime channel cadence (20 Hz)
+let   netTickAccum  = 0;          // accumulator in seconds
+let   rtTickAccum   = 0;
+let   currentTick   = 0;          // integer tick counter, increments each NET_TICK
+
+// ── LOCAL HISTORY BUFFER (30 ticks ≈ 3 seconds at 10 Hz) ─────────
+// Stores lightweight snapshots of myPlayer state for ability rollback.
+const HISTORY_LEN  = 30;
+const localHistory = [];          // ring buffer of {tick, x, y, vx, vy, hp, abilTimer, abilCdTimer}
+
+function snapshotMyPlayer() {
+  if (!myPlayer) return;
+  localHistory.push({
+    tick:       currentTick,
+    x:          myPlayer.x,
+    y:          myPlayer.y,
+    vx:         myPlayer.vx,
+    vy:         myPlayer.vy,
+    hp:         myPlayer.hp,
+    angle:      myPlayer.angle,
+    abilTimer:  myPlayer.abilTimer,
+    abilCdTimer:myPlayer.abilCdTimer,
+    dead:       myPlayer.dead,
+  });
+  if (localHistory.length > HISTORY_LEN) localHistory.shift();
+}
+
+function findHistoryAtTick(tick) {
+  // Binary-ish search — history is chronologically ordered
+  for (let i = localHistory.length - 1; i >= 0; i--) {
+    if (localHistory[i].tick <= tick) return localHistory[i];
+  }
+  return localHistory[0] || null;
+}
+
+function generateValidSpawnPoints(grid2D) {
+  const height = grid2D.length;
+  const width = height > 0 ? grid2D[0].length : 0;
+  if (width === 0 || height === 0) return [];
+
+  // 1. Define the 8 ideal anchor points
+  const minX = 0, maxX = width - 1;
+  const minY = 0, maxY = height - 1;
+  const midX = Math.floor(maxX / 2);
+  const midY = Math.floor(maxY / 2);
+
+  const anchors = [
+    { x: minX + 3, y: minY + 3}, { x: maxX - 3, y: minY + 3},
+    { x: minX + 3, y: maxY - 3}, { x: maxX - 3, y: maxY - 3},
+    { x: minX + 3, y: midY}, { x: maxX - 3, y: midY },
+    { x: midX, y: minY + 3}, { x: midX, y: maxY - 3}
+  ];
+
+  // 2. Helper function to find the nearest '0' for a single point
+  function findNearestZero(start) {
+    // If the starting anchor itself is 0, return it immediately
+    if (grid2D[start.y][start.x] === 0 || grid2D[start.y][start.x] === '0') {
+      return start;
+    }
+
+    const queue = [start];
+    const visited = Array.from({ length: height }, () => Array(width).fill(false));
+    visited[start.y][start.x] = true;
+
+    const directions = [
+      { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 }, { dx: 1, dy: 0 }
+    ];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+
+      for (const dir of directions) {
+        const nextX = current.x + dir.dx;
+        const nextY = current.y + dir.dy;
+
+        // Boundary check
+        if (nextX >= 0 && nextX < width && nextY >= 0 && nextY < height) {
+          if (!visited[nextY][nextX]) {
+            visited[nextY][nextX] = true;
+
+            // Check if we found a valid spawn value (0)
+            if (grid2D[nextY][nextX] === 0 || grid2D[nextY][nextX] === '0') {
+              return { x: nextX, y: nextY };
+            }
+
+            queue.push({ x: nextX, y: nextY });
+          }
+        }
+      }
+    }
+    return null; // Fallback if no 0 exists in the entire grid
+  }
+
+  // 3. Map each anchor point to its nearest valid 0 cell
+  return anchors.map(anchor => findNearestZero(anchor)).filter(p => p !== null);
+}
+
+
+
+let SPAWN_POINTS = generateValidSpawnPoints(MAP);
+
+function randomSpawn() {
+  if (!SPAWN_POINTS || SPAWN_POINTS.length === 0) {
+    // Fallback: centre of the map — shouldn't happen but prevents a crash
+    // if chooseMap hasn't been called yet or returned no valid points.
+    console.warn('Castle Brawl: SPAWN_POINTS empty, using map centre fallback');
+    return { x: (MAP_W || 20) * TILE / 2, y: (MAP_H || 15) * TILE / 2 };
+  }
+  const sp = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
+  return { x: sp.x * TILE + TILE / 2, y: sp.y * TILE + TILE / 2 };
+}
+
+function createPlayer(id, name, cls, x, y) {
+  const def = CLASS_DEFS[cls] || CLASS_DEFS.knight;
+  return {
+    id, name, cls,
+    x, y,
+    vx:0, vy:0,
+    angle: 0,
+    hp: def.maxHp,
+    maxHp: def.maxHp,
+    baseDmg: def.dmg,
+    dmg: def.dmg,
+    speed: def.speed,
+    attackRange: def.attackRange,
+    attackCooldown: def.attackCooldown,
+    rollSpeed: def.rollSpeed,
+    color: def.color,
+    emoji: def.emoji,
+    kills: 0,
+    attackTimer: 0,
+    rollTimer: 0,
+    rollDir: {x:0,y:0},
+    stamina: 100,
+    maxStamina: 100,
+    dead: false,
+    respawnTimer: 0,
+    lastSeen: Date.now(),
+    abilTimer: 0,
+    abilCdTimer: 0,
+
+    // ── NET-SMOOTHING (remote peers only) ─────────────────────────
+    // targetX/Y: the authoritatively reported position we lerp toward
+    targetX: x,
+    targetY: y,
+    // lerpAlpha: fraction per frame — higher = snappier, lower = smoother
+    // Dynamically tightened when the peer is far off (snap guard)
+    netLerpAlpha: 0.18,
+    // Last reported velocity from peer — used to extrapolate between packets
+    netVx: 0,
+    netVy: 0,
+    // How long since we last received a packet from this peer (seconds)
+    netTimeSincePacket: 0,
+  };
+}
+
+// ===========================
+//  LOBBY
+// ===========================
+function selectClass(el) {
+  document.querySelectorAll('.classBtn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  myClass = el.dataset.class;
+}
+
+function joinGame() {
+  const inp = document.getElementById('nameInput').value.trim();
+  if (inp) myName = inp;
+
+  // Read match options from the lobby controls
+  optBots     = document.getElementById('optBots').checked;
+  optBotCount = Math.min(8, Math.max(1, parseInt(document.getElementById('optBotCount').value) || 3));
+  optLives    = document.getElementById('optLives').checked;
+  optTimer    = document.getElementById('optTimer').checked;
+  myLivesLeft = optLives ? 3 : Infinity;
+  matchTimeLeft = MATCH_DURATION;
+  matchOver   = false;
+
+  // Apply the map the player picked in the lobby
+  chooseMap(selectedMap);
+  SPAWN_POINTS = generateValidSpawnPoints(MAP);
+
+  // Broadcast map choice so all peers load the same map
+  window.webxdc.sendUpdate({
+    payload: { type: 'mapChoice', mapIdx: selectedMap }
+  });
+
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('gameWrap').style.display = 'block';
+
+  initGame();
+}
+
+// ── SINGLE UNIFIED LISTENER ──────────────────────────────────────────
+// Called ONCE at load with serial 0. Routes every message by type
+// and by whether the local game session has started. This prevents
+// the double-registration bug where initGame() would re-register
+// from serial 0 and replay the entire history through game handlers
+// before myPlayer existed.
+const lobbyPlayers = {};
+let gameStarted = false;
+
+function onAnyUpdate(update) {
+  // Always advance lastSerial so we never replay old messages
+  if (update.serial) lastSerial = Math.max(lastSerial, update.serial);
+
+  const p = update.payload;
+  if (!p) return;
+
+  // ── Lobby-phase messages (visible to everyone, pre-game) ─────────
+  if (p.type === 'lobby') {
+    lobbyPlayers[p.id] = p.name;
+    const count = Object.keys(lobbyPlayers).length;
+    const el = document.getElementById('playerCount');
+    if (el) el.textContent = count === 1 ? '1 warrior ready' : count + ' warriors in the hall';
+    return;
+  }
+
+  // Map choice: apply in lobby so late-openers load the right map,
+  // but ONLY before this client has started their own game session.
+  if (p.type === 'mapChoice' && !gameStarted) {
+    selectedMap = p.mapIdx;
+    chooseMap(selectedMap);
+    SPAWN_POINTS = generateValidSpawnPoints(MAP);
+    drawMapPreview();
+    return;
+  }
+
+  // ── In-game messages: only route when game is running ────────────
+  // If gameStarted is false, these are replayed history from a
+  // previous session — silently discard them so they can't crash
+  // game functions that expect myPlayer to be non-null.
+  if (!gameStarted) return;
+
+  if (p.type === 'join')   handleJoin(p);
+  if (p.type === 'attack') handleAttackMsg(p);
+  if (p.type === 'state')  { p.sentAt = Date.now() - 80; handleStateMsg(p); }
+}
+
+window.webxdc.setUpdateListener(onAnyUpdate, 0).then(() => {
+  // Announce presence in the lobby once history replay is complete
+  window.webxdc.sendUpdate({
+    payload: { type: 'lobby', name: window.webxdc.selfName || 'Warrior', id: myId }
+  });
+});
+
+// ===========================
+//  GAME INIT
+// ===========================
+let canvas, ctx, minimapCanvas, minimapCtx;
+let lastTime = 0;
+
+function initGame() {
+  gameStarted = true;
+
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  minimapCanvas = document.getElementById('minimap');
+  minimapCtx = minimapCanvas.getContext('2d');
+
+  resizeCanvas();
+  // Guard against duplicate resize listeners if initGame were ever called twice
+  window.removeEventListener('resize', resizeCanvas);
+  window.addEventListener('resize', resizeCanvas);
+
+  const sp = randomSpawn();
+  myPlayer = createPlayer(myId, myName, myClass, sp.x, sp.y);
+  players[myId] = myPlayer;
+
+  document.getElementById('playerNameHud').textContent = myPlayer.emoji + ' ' + myPlayer.name;
+
+  if (window.webxdc.joinRealtimeChannel) {
+    rtChannel = window.webxdc.joinRealtimeChannel();
+    rtChannel.setListener(onRTMessage);
+  }
+
+  // NOTE: do NOT call setUpdateListener again here.
+  // onAnyUpdate is already registered from load time and routes
+  // in-game messages correctly now that gameStarted === true.
+
+  // Spawn local bots if enabled
+  if (optBots) {
+    const usedNames = new Set();
+    for (let i = 0; i < optBotCount; i++) {
+      let bname;
+      do { bname = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; }
+      while (usedNames.has(bname));
+      usedNames.add(bname);
+      const bcls  = BOT_CLASSES[Math.floor(Math.random() * BOT_CLASSES.length)];
+      const bsp   = randomSpawn();
+      const botId = 'bot_' + i + '_' + Date.now();
+      const bot   = createPlayer(botId, bname, bcls, bsp.x, bsp.y);
+      bot.isBot   = true;
+      bot.botThinkTimer  = Math.random() * 1.5; // stagger first decision
+      bot.botTarget      = null;
+      bot.botWanderAngle = Math.random() * Math.PI * 2;
+      bot.botWanderTimer = 0;
+      bots.push(bot);
+      players[botId] = bot;
+    }
+  }
+
+  broadcastJoin();
+  setupKeyboard();
+  setupTouch();
+
+  requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+// ===========================
+//  NETWORK
+// ===========================
+function broadcastJoin() {
+  window.webxdc.sendUpdate({
+    payload: {
+      type: 'join',
+      id: myId,
+      name: myName,
+      cls: myClass,
+      x: myPlayer.x,
+      y: myPlayer.y,
+    }
+  });
+}
+
+// broadcastState is now called from update() which gates it via accumulators.
+// Two cadences:
+//   rtTickAccum  >= RT_TICK_MS/1000  → send compact state on realtime channel (20 Hz)
+//   netTickAccum >= NET_TICK_MS/1000 → snapshot history, increment tick, send via sendUpdate (10 Hz)
+function broadcastState(dt) {
+  if (!myPlayer) return;
+
+  // ── Realtime channel (20 Hz) — position + velocity for dead-reckoning ──
+  rtTickAccum += dt;
+  if (rtTickAccum >= RT_TICK_MS / 1000) {
+    rtTickAccum = 0;
+    if (rtChannel) {
+      const rtMsg = {
+        t: 's',
+        id: myId,
+        tick: currentTick,
+        x:  Math.round(myPlayer.x),
+        y:  Math.round(myPlayer.y),
+        vx: Math.round(myPlayer.vx * 10) / 10,   // pixels/sec, 1 dp
+        vy: Math.round(myPlayer.vy * 10) / 10,
+        a:  Math.round(myPlayer.angle * 100) / 100,
+        hp: myPlayer.hp,
+        d:  myPlayer.dead ? 1 : 0,
+        k:  myPlayer.kills,
+        at: Math.round(myPlayer.abilTimer * 100) / 100,
+      };
+      rtChannel.send(new TextEncoder().encode(JSON.stringify(rtMsg)));
+    }
+  }
+
+  // ── sendUpdate (10 Hz) — authoritative tick snapshot ───────────
+  netTickAccum += dt;
+  if (netTickAccum >= NET_TICK_MS / 1000) {
+    netTickAccum = 0;
+    currentTick++;
+    snapshotMyPlayer();
+    // sendUpdate carries the same payload; peers use this for join/hp sync
+    // (not performance-critical — just authoritative state confirmation)
+    window.webxdc.sendUpdate({
+      payload: {
+        type: 'state',
+        id:   myId,
+        tick: currentTick,
+        x:    Math.round(myPlayer.x),
+        y:    Math.round(myPlayer.y),
+        vx:   Math.round(myPlayer.vx * 10) / 10,
+        vy:   Math.round(myPlayer.vy * 10) / 10,
+        a:    Math.round(myPlayer.angle * 100) / 100,
+        hp:   myPlayer.hp,
+        d:    myPlayer.dead ? 1 : 0,
+        k:    myPlayer.kills,
+        at:   Math.round(myPlayer.abilTimer * 100) / 100,
+      }
+    });
+  }
+}
+
+function broadcastAttack(targets) {
+  if (!myPlayer || targets.length === 0) return;
+  const msg = {
+    t:       'atk',
+    id:      myId,
+    tick:    currentTick,           // included so victim can rollback-check
+    sentAt:  Date.now(),
+    x:       Math.round(myPlayer.x),
+    y:       Math.round(myPlayer.y),
+    a:       myPlayer.angle,
+    targets: targets.map(t => ({ id: t.id, dmg: t.dmg }))
+  };
+  if (rtChannel) {
+    rtChannel.send(new TextEncoder().encode(JSON.stringify(msg)));
+  }
+  // Also send via sendUpdate for reliability (covers cases where RT drops)
+  window.webxdc.sendUpdate({ payload: { type: 'attack', ...msg } });
+}
+
+function onRTMessage(data) {
+  try {
+    const msg = JSON.parse(new TextDecoder().decode(data));
+    handleNetMsg(msg);
+  } catch(e) {}
+}
+
+// onGameUpdate was removed — all routing now goes through
+// the unified onAnyUpdate listener registered at load time.
+// This prevents the double-registration / history-replay crash
+// on second open in Delta Chat.
+
+function handleNetMsg(msg) {
+  if (!msg || !msg.t) return;
+  if (msg.t === 's') {
+    // RT channel: transit time is very short — tag as "just arrived"
+    msg.sentAt = Date.now();
+    handleStateMsg(msg);
+  }
+  if (msg.t === 'atk')  handleAttackMsg(msg);
+  if (msg.t === 'join') handleJoin(msg);
+}
+
+function handleStateMsg(msg) {
+  if (msg.id === myId) return;
+  const p = players[msg.id];
+  if (!p) return;
+
+  const now = Date.now();
+  p.lastSeen = now;
+  p.netTimeSincePacket = 0;
+
+  // ── Dead-reckoning: extrapolate where they *actually* are now ──
+  // The packet carries their position at packet-send time. By the time
+  // we receive it, some transit delay has passed. Use their reported
+  // velocity to project them forward by an estimated one-way delay
+  // (clamped to 200 ms so we don't overshoot on extreme lag).
+  const estimatedTransitSec = Math.min(0.2, (now - (msg.sentAt || now)) / 1000);
+  const drX = (msg.x || 0) + (msg.vx || 0) * estimatedTransitSec;
+  const drY = (msg.y || 0) + (msg.vy || 0) * estimatedTransitSec;
+
+  // ── Snap guard: if they're very far away, teleport instead of lerp ──
+  const distSq = (p.x - drX)**2 + (p.y - drY)**2;
+  if (distSq > 200 * 200) {
+    // >200 px off — hard snap (respawn, first packet, extreme lag)
+    p.x = drX; p.y = drY;
+  }
+
+  // Always update the lerp target — smooth drift will close the gap
+  p.targetX = drX;
+  p.targetY = drY;
+
+  // Store reported velocity so we can extrapolate further between packets
+  p.netVx = msg.vx || 0;
+  p.netVy = msg.vy || 0;
+
+  p.angle    = msg.a  || p.angle;
+  p.kills    = msg.k  || p.kills;
+
+  // ── Ability-timing rollback check ─────────────────────────────
+  // If the peer's packet proves their ability was ACTIVE at a past tick
+  // when we thought we hit them, and our history shows we attacked
+  // during that window — quietly nullify the hit's local bookkeeping.
+  const peerAbilTimer = msg.at || 0;
+  const msgTick       = msg.tick || currentTick;
+  const tickDelta     = currentTick - msgTick;
+
+  if (tickDelta > 0 && tickDelta <= HISTORY_LEN && peerAbilTimer > 0) {
+    const snap = findHistoryAtTick(msgTick);
+    if (snap) {
+      // If we were *not* marked as having ability immunity ourselves at that
+      // tick, the peer's defensive ability was legitimately active — accept
+      // their HP value as authoritative (attacker-favored except for blocks).
+      if (p.cls === 'knight' && peerAbilTimer > 0) {
+        // Knight block was active at that tick — revert any local HP damage
+        // we applied to them by just accepting their hp
+        p.hp = Math.max(0, msg.hp);
+      } else if (p.cls === 'rogue' && peerAbilTimer > 0) {
+        // Rogue was stealthed — accept their hp
+        p.hp = Math.max(0, msg.hp);
+      } else {
+        // Normal case: trust our local attacker-favored calculation but
+        // reconcile if we're more than 20% off
+        const localHp  = p.hp;
+        const remoteHp = Math.max(0, msg.hp);
+        if (Math.abs(localHp - remoteHp) > p.maxHp * 0.20) {
+          // Significant divergence — blend toward authoritative value
+          p.hp = Math.round(localHp * 0.4 + remoteHp * 0.6);
+        }
+      }
+    }
+  } else {
+    // No tick dispute — direct authoritative sync
+    p.hp   = Math.max(0, msg.hp);
+    p.dead = !!msg.d;
+  }
+
+  p.abilTimer = peerAbilTimer;
+}
+
+function handleJoin(msg) {
+  if (msg.id === myId) return;
+  if (!players[msg.id]) {
+    const sp  = randomSpawn();
+    const px  = msg.x || sp.x;
+    const py  = msg.y || sp.y;
+    const np  = createPlayer(msg.id, msg.name || '?', msg.cls || 'knight', px, py);
+    np.targetX = px;
+    np.targetY = py;
+    players[msg.id] = np;
+    showStatus('⚔️ ' + (msg.name||'Warrior') + ' entered the arena!');
+  }
+  players[msg.id].lastSeen = Date.now();
+  players[msg.id].netTimeSincePacket = 0;
+  setTimeout(broadcastJoin, 300);
+}
+
+function handleAttackMsg(msg) {
+  if (!msg.targets) return;
+  msg.targets.forEach(t => {
+    if (t.id !== myId || !myPlayer || myPlayer.dead) return;
+
+    // ── Rollback check: was my ability active at the attacker's tick? ──
+    const atkTick  = msg.tick || currentTick;
+    const tickDelta = currentTick - atkTick;
+    let abilWasActive = false;
+    if (tickDelta > 0 && tickDelta <= HISTORY_LEN) {
+      const snap = findHistoryAtTick(atkTick);
+      if (snap && snap.abilTimer > 0) abilWasActive = true;
+    } else {
+      // Attack arrived in real-time — use current state
+      abilWasActive = myPlayer.abilTimer > 0;
+    }
+
+    // Knight block: ability must have been active at attack time
+    if (myPlayer.cls === 'knight' && abilWasActive) {
+      spawnDamageFloat(myPlayer.x, myPlayer.y - 15, 'BLOCKED', '#8899cc');
+      return;
+    }
+
+    let receivedDmg = t.dmg;
+    // Barbarian rage vulnerability (historical or current)
+    if (myPlayer.cls === 'barbarian' && abilWasActive) {
+      receivedDmg = Math.round(receivedDmg * 1.2);
+    }
+
+    // Attacker-favored: accept the damage — we apply it immediately and
+    // trust the attacker's local hit detection. This avoids the situation
+    // where high latency means neither side registers a hit.
+    myPlayer.hp = Math.max(0, myPlayer.hp - receivedDmg);
+    spawnDamageFloat(myPlayer.x, myPlayer.y, receivedDmg, '#ff4040');
+    spawnBloodParticles(myPlayer.x, myPlayer.y);
+    if (myPlayer.hp <= 0) {
+      myPlayer.dead = true;
+      myPlayer.respawnTimer = 4;
+      document.getElementById('respawnOverlay').style.display = 'flex';
+    }
+  });
+}
+
+// ===========================
+//  GAME LOOP
+// ===========================
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ===========================
+//  UPDATE
+// ===========================
+function update(dt) {
+  if (!myPlayer || matchOver) return;
+
+  // ── Match timer ────────────────────────────────────────────────
+  if (optTimer) {
+    matchTimeLeft -= dt;
+    if (matchTimeLeft <= 0) {
+      matchTimeLeft = 0;
+      endMatch('timer');
+      return;
+    }
+  }
+
+  const now = Date.now();
+  Object.keys(players).forEach(id => {
+    if (id !== myId && !players[id].isBot && now - players[id].lastSeen > 15000) {
+      delete players[id];
+    }
+  });
+
+  // ── STAGE 1: Local prediction — apply inputs to myPlayer instantly ──
+  updatePlayer(myPlayer, dt);
+  broadcastState(dt);
+
+  // ── STAGE 2: Remote extrapolation — drift peers toward their target ──
+  for (const [id, p] of Object.entries(players)) {
+    if (id === myId || p.isBot || p.dead) continue;
+
+    p.netTimeSincePacket += dt;
+
+    // Dead-reckoning: project the peer's position forward using their
+    // last-known velocity while we wait for the next packet.
+    // Cap extrapolation at 300 ms to avoid runaway drift.
+    const extrapolateFor = Math.min(p.netTimeSincePacket, 0.3);
+    const extraX = p.targetX + p.netVx * extrapolateFor;
+    const extraY = p.targetY + p.netVy * extrapolateFor;
+
+    // Adaptive LERP alpha: snap if >80 px off, normal lerp otherwise
+    const distSq = (p.x - extraX)**2 + (p.y - extraY)**2;
+    const alpha = distSq > 80*80 ? 0.5 : p.netLerpAlpha;
+
+    p.x += (extraX - p.x) * alpha;
+    p.y += (extraY - p.y) * alpha;
+  }
+
+  // Update bots
+  for (const bot of bots) updateBot(bot, dt);
+
+  // ── Item spawning ──────────────────────────────────────────────
+  itemSpawnTimer += dt;
+  if (itemSpawnTimer > 7.0 && items.length < 10) {
+    itemSpawnTimer = 0;
+    spawnRandomItem();
+  }
+  updateItems(myPlayer);
+  for (const bot of bots) updateItems(bot);
+
+  updateBombArrows(dt);
+  updateArrows(dt);
+  updateParticles(dt);
+  updateFloaters(dt);
+  updateSwings(dt);
+  updateHUD();
+
+  // ── Win condition check ────────────────────────────────────────
+  checkWinCondition();
+}
+
+function updatePlayer(p, dt) {
+  if (p.dead) {
+    if (p === myPlayer) {
+      p.respawnTimer -= dt;
+      if (p.respawnTimer <= 0) {
+        respawnMe();
+      }
+    }
+    return;
+  }
+
+  if (p.attackTimer > 0) p.attackTimer -= dt;
+
+  // NEW STATE: Update and decrement specific ability countdown timers
+  if (p.abilTimer > 0) p.abilTimer -= dt;
+  if (p.abilCdTimer > 0) p.abilCdTimer -= dt;
+
+  if (p.rollTimer <= 0) {
+    p.stamina = Math.min(p.maxStamina, p.stamina + 20 * dt);
+  }
+
+  if (p !== myPlayer) return; 
+
+  if (p.rollTimer > 0) {
+    p.rollTimer -= dt;
+    const spd = p.rollSpeed;
+    const nx = p.x + p.rollDir.x * spd * dt;
+    const ny = p.y + p.rollDir.y * spd * dt;
+    if (!collides(nx, p.y, 10)) p.x = nx;
+    if (!collides(p.x, ny, 10)) p.y = ny;
+    return; 
+  }
+
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']||keys['a']||keys['A']) dx -= 1;
+  if (keys['ArrowRight']||keys['d']||keys['D']) dx += 1;
+  if (keys['ArrowUp']||keys['w']||keys['W']) dy -= 1;
+  if (keys['ArrowDown']||keys['s']||keys['S']) dy += 1;
+  dx += joyX;
+  dy += joyY;
+
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len > 1) { dx /= len; dy /= len; }
+
+  if (dx !== 0 || dy !== 0) {
+    p.angle = Math.atan2(dy, dx);
+  }
+
+  // NEW ABILITY: Barbarian 1.5x dynamic speed boost when raging
+  let activeSpeed = p.speed;
+  if (p.cls === 'barbarian' && p.abilTimer > 0) {
+    activeSpeed *= 1.5;
+  }
+
+  const prevX = p.x, prevY = p.y;
+  const nx = p.x + dx * activeSpeed * dt;
+  const ny = p.y + dy * activeSpeed * dt;
+  if (!collides(nx, p.y, 10)) p.x = nx;
+  if (!collides(p.x, ny, 10)) p.y = ny;
+
+  // Track actual velocity for dead-reckoning broadcast (pixels/sec)
+  if (dt > 0) {
+    p.vx = (p.x - prevX) / dt;
+    p.vy = (p.y - prevY) / dt;
+  }
+
+  if ((keys['z']||keys['Z']||keys[' ']) && p.attackTimer <= 0) {
+    doAttack(p);
+  }
+
+  if ((keys['x']||keys['X']) && p.rollTimer <= 0 && p.stamina >= 30) {
+    p.rollTimer = 0.28;
+    p.stamina -= 30;
+    p.rollDir = { x: Math.cos(p.angle), y: Math.sin(p.angle) };
+    spawnRollParticles(p.x, p.y);
+  }
+
+  // Keyboard support for custom action 
+  if ((keys['c']||keys['C']) && p.abilCdTimer <= 0) {
+    useAbility(p);
+  }
+}
+
+// NEW FUNCTION: Handle class ability execution logic
+function useAbility(p) {
+  if (p.dead || p.abilCdTimer > 0 || p.rollTimer > 0) return;
+  const def = CLASS_DEFS[p.cls];
+  p.abilCdTimer = def.abilCd;
+
+  if (p.cls === 'knight') {
+    p.abilTimer = 1.0; // 1 second total damage immunity
+    showStatus('🛡️ Invincible!');
+    spawnRollParticles(p.x, p.y);
+  } 
+  else if (p.cls === 'rogue') {
+    p.abilTimer = 3.0; // 3 seconds stealth shroud
+    showStatus('👤 Stealthed!');
+  } 
+  else if (p.cls === 'barbarian') {
+    p.abilTimer = 2.0; // 2 seconds rage speed multiplier window
+    showStatus('😡 RAGE MODE!');
+  } 
+  else if (p.cls === 'archer') {
+    showStatus('🚀 Bomb Arrow Launched!');
+    // Fire dynamic delayed area-of-effect bomb projectile
+    bombArrows.push({
+      x: p.x,
+      y: p.y,
+      targetX: p.x + Math.cos(p.angle) * 160, 
+      targetY: p.y + Math.sin(p.angle) * 160,
+      pct: 0,
+      fuse: 1.0, 
+      hasLanded: false,
+      ownerId: p.id
+    });
+  }
+}
+
+// ===========================
+//  BOT AI
+// ===========================
+function updateBot(bot, dt) {
+  if (bot.dead) {
+    bot.respawnTimer -= dt;
+    if (bot.respawnTimer <= 0) respawnBot(bot);
+    return;
+  }
+
+  if (bot.attackTimer > 0) bot.attackTimer -= dt;
+  if (bot.abilTimer   > 0) bot.abilTimer   -= dt;
+  if (bot.abilCdTimer > 0) bot.abilCdTimer -= dt;
+  if (bot.rollTimer   > 0) {
+    bot.rollTimer -= dt;
+    const nx = bot.x + bot.rollDir.x * bot.rollSpeed * dt;
+    const ny = bot.y + bot.rollDir.y * bot.rollSpeed * dt;
+    if (!collides(nx, bot.y, 10)) bot.x = nx;
+    if (!collides(bot.x, ny, 10)) bot.y = ny;
+    return;
+  }
+  bot.stamina = Math.min(bot.maxStamina, bot.stamina + 20 * dt);
+
+  // Re-pick target every ~2 s or when target is dead/gone
+  bot.botThinkTimer -= dt;
+  if (bot.botThinkTimer <= 0 || !bot.botTarget || bot.botTarget.dead) {
+    bot.botThinkTimer = 1.5 + Math.random() * 1.5;
+    const candidates = Object.values(players).filter(p =>
+      p.id !== bot.id && !p.dead && !(p.cls === 'rogue' && p.abilTimer > 0)
+    );
+    bot.botTarget = candidates.length
+      ? candidates[Math.floor(Math.random() * candidates.length)]
+      : null;
+    // Occasionally use ability
+    if (bot.abilCdTimer <= 0 && Math.random() < 0.4) useAbility(bot);
+    // Occasionally roll
+    if (bot.stamina >= 30 && Math.random() < 0.2) {
+      bot.rollTimer = 0.28;
+      bot.stamina -= 30;
+      bot.rollDir = { x: Math.cos(bot.angle), y: Math.sin(bot.angle) };
+    }
+  }
+
+  let moveX = 0, moveY = 0;
+  if (bot.botTarget) {
+    const dx = bot.botTarget.x - bot.x;
+    const dy = bot.botTarget.y - bot.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    bot.angle = Math.atan2(dy, dx);
+
+    const stopDist = bot.cls === 'archer' ? 100 : bot.attackRange * 0.7;
+    if (dist > stopDist) {
+      moveX = dx / dist;
+      moveY = dy / dist;
+    }
+    // Attack when close enough and cooldown ready
+    if (dist <= bot.attackRange * 1.1 && bot.attackTimer <= 0) {
+      doAttack(bot);
+    }
+  } else {
+    // Wander
+    bot.botWanderTimer -= dt;
+    if (bot.botWanderTimer <= 0) {
+      bot.botWanderTimer = 1 + Math.random() * 2;
+      bot.botWanderAngle = Math.random() * Math.PI * 2;
+    }
+    bot.angle = bot.botWanderAngle;
+    moveX = Math.cos(bot.botWanderAngle);
+    moveY = Math.sin(bot.botWanderAngle);
+  }
+
+  // Move with speed
+  let spd = bot.speed;
+  if (bot.cls === 'barbarian' && bot.abilTimer > 0) spd *= 1.5;
+  if (moveX !== 0 || moveY !== 0) {
+    const nx = bot.x + moveX * spd * dt;
+    const ny = bot.y + moveY * spd * dt;
+    if (!collides(nx, bot.y, 10)) bot.x = nx;
+    else bot.botWanderAngle += Math.PI * 0.5; // unstick on wall
+    if (!collides(bot.x, ny, 10)) bot.y = ny;
+    else bot.botWanderAngle += Math.PI * 0.5;
+  }
+}
+
+function respawnBot(bot) {
+  const sp = randomSpawn();
+  bot.x = sp.x; bot.y = sp.y;
+  bot.hp = bot.maxHp;
+  bot.dmg = bot.baseDmg;
+  bot.dead = false;
+  bot.stamina = bot.maxStamina;
+  bot.abilTimer = 0; bot.abilCdTimer = 0;
+  // Bots always respawn (they have infinite lives)
+}
+
+// ===========================
+//  WIN CONDITION
+// ===========================
+function checkWinCondition() {
+  if (matchOver) return;
+  if (!optLives && !optTimer) return;
+
+  // Count human players still in (lives > 0 or no-lives-mode)
+  const humanAlive = Object.values(players).filter(p =>
+    !p.isBot && !p.dead && p.id !== myId
+  );
+
+  // If lives mode: eliminate players at 0 lives (handled in respawnMe / handleDeath)
+  // Check if we're the last human standing
+  if (optLives && myLivesLeft > 0) {
+    const humanAliveWithLives = Object.values(players).filter(p =>
+      !p.isBot && !p.dead
+    );
+    if (humanAliveWithLives.length <= 1 && humanAlive.length === 0) {
+      endMatch('lastStanding');
+    }
+  }
+}
+
+function endMatch(reason) {
+  if (matchOver) return;
+  matchOver = true;
+
+  const myKills = myPlayer ? myPlayer.kills : 0;
+
+  if (reason === 'eliminated') {
+    // I'm out — show defeat
+    document.getElementById('defeatDetail').textContent =
+      'You fell in battle with ' + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+    document.getElementById('defeatOverlay').style.display = 'flex';
+  } else if (reason === 'lastStanding') {
+    document.getElementById('victoryDetail').textContent =
+      'Last warrior standing! ' + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+    document.getElementById('victoryOverlay').style.display = 'flex';
+  } else if (reason === 'timer') {
+    // Most kills wins
+    let bestKills = myKills;
+    let winner = 'You';
+    Object.values(players).forEach(p => {
+      if (!p.isBot && p.kills > bestKills) { bestKills = p.kills; winner = p.name; }
+    });
+    if (winner === 'You') {
+      document.getElementById('victoryDetail').textContent =
+        "Time's up! Most kills wins — " + myKills + ' kill' + (myKills !== 1 ? 's' : '') + '.';
+      document.getElementById('victoryOverlay').style.display = 'flex';
+    } else {
+      document.getElementById('defeatDetail').textContent =
+        "Time's up! " + winner + ' wins with ' + bestKills + ' kills. You had ' + myKills + '.';
+      document.getElementById('defeatOverlay').style.display = 'flex';
+    }
+  }
+}
+
+function collides(x, y, r) {
+  const offsets = [[-r,-r],[r,-r],[-r,r],[r,r]];
+  for (const [ox,oy] of offsets) {
+    const tx = Math.floor((x+ox)/TILE);
+    const ty = Math.floor((y+oy)/TILE);
+    if (tileBlocks(tx,ty)) return true;
+  }
+  return false;
+}
+
+function doAttack(p) {
+  p.attackTimer = p.attackCooldown;
+
+  // Archer fires a normal (non-explosive) arrow instead of an instant melee swing
+  if (p.cls === 'archer') {
+    arrows.push({
+      x: p.x,
+      y: p.y,
+      vx: Math.cos(p.angle) * 420,  // fast straight flight
+      vy: Math.sin(p.angle) * 420,
+      angle: p.angle,
+      dmg: p.dmg,
+      ownerId: p.id,
+      ownerName: p.name,
+      range: p.attackRange,        // max travel distance before despawn
+      travelled: 0,
+      life: 1.2                    // hard timeout in seconds
+    });
+    return; // no melee swing or arc for archer normal attack
+  }
+
+  // NEW MECHANIC: If rogue chooses to swing/engage weapon, immediately end stealth window early
+  if (p.cls === 'rogue' && p.abilTimer > 0) {
+    p.abilTimer = 0;
+  }
+
+  const targets = [];
+  Object.values(players).forEach(other => {
+    if (other.id === p.id || other.dead) return;
+    
+    // Check if target is a stealthed rogue (cannot hit invisible targets unless it's yourself playtesting)
+    if (other.cls === 'rogue' && other.abilTimer > 0) return;
+
+    const dx = other.x - p.x;
+    const dy = other.y - p.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if (dist > p.attackRange) return;
+
+    const angleToTarget = Math.atan2(dy, dx);
+    let diff = angleToTarget - p.angle;
+    while (diff > Math.PI) diff -= 2*Math.PI;
+    while (diff < -Math.PI) diff += 2*Math.PI;
+    if (Math.abs(diff) > Math.PI*0.65) return;
+
+    // Knight immunity utility validation check
+    if (other.cls === 'knight' && other.abilTimer > 0) return;
+
+    let targetSufferedDmg = p.dmg;
+    if (other.cls === 'barbarian' && other.abilTimer > 0) {
+      targetSufferedDmg = Math.round(targetSufferedDmg * 1.2);
+    }
+
+    targets.push({ id: other.id, dmg: targetSufferedDmg });
+    other.hp = Math.max(0, other.hp - targetSufferedDmg);
+    spawnDamageFloat(other.x, other.y - 20, targetSufferedDmg, '#ffcc40');
+    spawnBloodParticles(other.x, other.y);
+    if (other.hp <= 0 && !other.dead) {
+      other.dead = true;
+      other.respawnTimer = 4;
+      p.kills++;
+      if (p.id === myId) {
+        kills++;
+        showStatus('⚔️ You slew ' + other.name + '!');
+      }
+    }
+  });
+
+  swings.push({ x:p.x, y:p.y, angle:p.angle, life:0.18, maxLife:0.18, range:p.attackRange, color:p.color });
+  broadcastAttack(targets);
+}
+
+// NEW FUNCTION: Populates map pickup arrays on valid open floor coordinates
+function spawnRandomItem() {
+  const tx = Math.floor(Math.random() * MAP_W);
+  const ty = Math.floor(Math.random() * MAP_H);
+  if (MAP[ty][tx] === 0) {
+    const itemX = tx * TILE + TILE / 2;
+    const itemY = ty * TILE + TILE / 2;
+    // Prevent duplicate spawning stacks on exact same tile
+    const exists = items.some(it => Math.abs(it.x - itemX) < 5 && Math.abs(it.y - itemY) < 5);
+    if (!exists) {
+      const type = Math.random() > 0.4 ? 'health' : 'damage';
+      items.push({ x: itemX, y: itemY, type });
+    }
+  }
+}
+
+// NEW FUNCTION: Evaluate proximity step overlaps to process picking items up
+function updateItems(p) {
+  if (p.dead) return;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const item = items[i];
+    const dx = p.x - item.x;
+    const dy = p.y - item.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < 20) { 
+      if (item.type === 'health') {
+        p.hp = Math.min(p.maxHp, p.hp + 40);
+        showStatus('❤️ Restored +40 HP!');
+        spawnDamageFloat(p.x, p.y - 20, 'Healed!', '#44aa22');
+      } else if (item.type === 'damage') {
+        p.dmg += 5; // Permanent item damage buff for the current life layout
+        showStatus('💎 Weapon Upgraded (+5 DMG)!');
+        spawnDamageFloat(p.x, p.y - 20, '+5 DMG', '#ffcc40');
+      }
+      items.splice(i, 1);
+    }
+  }
+}
+
+// NEW FUNCTION: Process archer projectile flight physics and structural fuse timer cycles
+function updateBombArrows(dt) {
+  for (let i = bombArrows.length - 1; i >= 0; i--) {
+    let b = bombArrows[i];
+    if (!b.hasLanded) {
+      b.pct += dt * 3.0; 
+      b.x = b.x + (b.targetX - b.x) * Math.min(b.pct, 1);
+      b.y = b.y + (b.targetY - b.y) * Math.min(b.pct, 1);
+      if (b.pct >= 1) b.hasLanded = true;
+    } else {
+      b.fuse -= dt;
+      if (b.fuse <= 0) {
+        // Evaluate dynamic explosive radius hit box impact (75px)
+        const blastRadius = 75;
+        if (myPlayer && !myPlayer.dead) {
+          const dist = Math.sqrt((myPlayer.x - b.x)**2 + (myPlayer.y - b.y)**2);
+          if (dist <= blastRadius) {
+            // Apply defensive immunity rules
+            if (!(myPlayer.cls === 'knight' && myPlayer.abilTimer > 0)) {
+              let baseBlastDmg = 40;
+              if (myPlayer.cls === 'barbarian' && myPlayer.abilTimer > 0) {
+                baseBlastDmg = Math.round(baseBlastDmg * 1.2);
+              }
+              myPlayer.hp = Math.max(0, myPlayer.hp - baseBlastDmg);
+              spawnDamageFloat(myPlayer.x, myPlayer.y, baseBlastDmg, '#ff4040');
+              spawnBloodParticles(myPlayer.x, myPlayer.y);
+              if (myPlayer.hp <= 0) {
+                myPlayer.dead = true;
+                myPlayer.respawnTimer = 4;
+                document.getElementById('respawnOverlay').style.display = 'flex';
+              }
+            }
+          }
+        }
+        
+        // Spawn aesthetic explosion particles
+        for(let p=0; p<14; p++) {
+          particles.push({
+            x: b.x, y: b.y, 
+            vx: (Math.random() - 0.5) * 200, 
+            vy: (Math.random() - 0.5) * 200, 
+            life: 0.45, color: '#ffaa00', size: 4 + Math.random() * 4
+          });
+        }
+        bombArrows.splice(i, 1);
+      }
+    }
+  }
+}
+
+// ===========================
+//  NORMAL ARROW PHYSICS
+// ===========================
+function updateArrows(dt) {
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    const a = arrows[i];
+    a.life -= dt;
+
+    const stepX = a.vx * dt;
+    const stepY = a.vy * dt;
+
+    // Wall collision: stop and despawn on impact
+    const nextX = a.x + stepX;
+    const nextY = a.y + stepY;
+    const hitWall = tileBlocks(Math.floor(nextX / TILE), Math.floor(nextY / TILE));
+
+    if (hitWall || a.life <= 0) {
+      // Little puff of dust on wall hit
+      if (hitWall) {
+        for (let k = 0; k < 3; k++) {
+          const ang = Math.random() * Math.PI * 2;
+          particles.push({ x: a.x, y: a.y, vx: Math.cos(ang)*40, vy: Math.sin(ang)*40,
+                           life: 0.25, color: '#c8a070', size: 2 });
+        }
+      }
+      arrows.splice(i, 1);
+      continue;
+    }
+
+    a.x = nextX;
+    a.y = nextY;
+    a.travelled += Math.sqrt(stepX*stepX + stepY*stepY);
+
+    // Hit detection against all players
+    for (const other of Object.values(players)) {
+      if (other.id === a.ownerId || other.dead) continue;
+      if (other.cls === 'rogue' && other.abilTimer > 0) continue; // stealthed
+
+      const dx = other.x - a.x;
+      const dy = other.y - a.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 16) continue; // hitbox radius 16px
+
+      // Apply defences
+      if (other.cls === 'knight' && other.abilTimer > 0) {
+        spawnDamageFloat(other.x, other.y - 15, 'BLOCKED', '#8899cc');
+        arrows.splice(i, 1);
+        break;
+      }
+
+      let dmg = a.dmg;
+      if (other.cls === 'barbarian' && other.abilTimer > 0) dmg = Math.round(dmg * 1.2);
+
+      other.hp = Math.max(0, other.hp - dmg);
+      spawnDamageFloat(other.x, other.y - 20, dmg, '#aaffaa');
+      spawnBloodParticles(other.x, other.y);
+
+      if (other.hp <= 0 && !other.dead) {
+        other.dead = true;
+        other.respawnTimer = 4;
+        // Credit kill to arrow owner
+        const owner = players[a.ownerId];
+        if (owner) {
+          owner.kills++;
+          if (a.ownerId === myId) {
+            kills++;
+            showStatus('🏹 You slew ' + other.name + '!');
+          }
+        }
+      }
+
+      // Broadcast the hit so the target client applies damage
+      broadcastAttack([{ id: other.id, dmg }]);
+      arrows.splice(i, 1);
+      break;
+    }
+  }
+}
+
+// ===========================
+//  EFFECTS
+// ===========================
+function spawnDamageFloat(x,y,dmg,color) {
+  let displayedText = typeof dmg === 'number' ? '-' + dmg : dmg;
+  floaters.push({ x, y, text:displayedText, color, life:1.2, maxLife:1.2, vy:-60 });
+}
+
+function updateFloaters(dt) {
+  for (let i=floaters.length-1;i>=0;i--) {
+    const f=floaters[i];
+    f.life-=dt;
+    f.y+=f.vy*dt;
+    if (f.life<=0) floaters.splice(i,1);
+  }
+}
+
+function spawnBloodParticles(x,y) {
+  for (let i=0;i<6;i++) {
+    const a = Math.random()*Math.PI*2;
+    const spd = 60+Math.random()*80;
+    particles.push({ x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd, life:0.5+Math.random()*0.3, color:'#cc2200', size:3+Math.random()*3 });
+  }
+}
+
+function spawnRollParticles(x,y) {
+  for (let i=0;i<4;i++) {
+    const a = Math.random()*Math.PI*2;
+    particles.push({ x, y, vx:Math.cos(a)*50, vy:Math.sin(a)*50, life:0.3, color:'#c8c0a0', size:2 });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i=particles.length-1;i>=0;i--) {
+    const p=particles[i];
+    p.life-=dt;
+    p.x+=p.vx*dt;
+    p.y+=p.vy*dt;
+    p.vx*=0.85; p.vy*=0.85;
+    if (p.life<=0) particles.splice(i,1);
+  }
+}
+
+function updateSwings(dt) {
+  for (let i=swings.length-1;i>=0;i--) {
+    swings[i].life-=dt;
+    if (swings[i].life<=0) swings.splice(i,1);
+  }
+}
+
+// ===========================
+//  RESPAWN
+// ===========================
+function respawnMe() {
+  // Deduct a life if lives mode is active
+  if (optLives && isFinite(myLivesLeft)) {
+    myLivesLeft--;
+    if (myLivesLeft <= 0) {
+      // Permanently eliminated
+      document.getElementById('respawnOverlay').style.display = 'none';
+      myPlayer.dead = true;
+      endMatch('eliminated');
+      return;
+    }
+  }
+
+  const sp = randomSpawn();
+  myPlayer.x = sp.x;
+  myPlayer.y = sp.y;
+  myPlayer.targetX = sp.x;   // reset lerp target to new spawn
+  myPlayer.targetY = sp.y;
+  myPlayer.vx = 0;
+  myPlayer.vy = 0;
+  myPlayer.hp = myPlayer.maxHp;
+  myPlayer.dmg = myPlayer.baseDmg;
+  myPlayer.dead = false;
+  myPlayer.stamina = myPlayer.maxStamina;
+  myPlayer.abilTimer = 0;
+  myPlayer.abilCdTimer = 0;
+  document.getElementById('respawnOverlay').style.display = 'none';
+  const livesStr = (optLives && isFinite(myLivesLeft)) ? ' (' + myLivesLeft + ' ' + (myLivesLeft===1?'life':'lives') + ' left)' : '';
+  showStatus('You have risen! ⚔️' + livesStr);
+  broadcastJoin();
+}
+
+// ===========================
+//  HUD
+// ===========================
+function updateHUD() {
+  if (!myPlayer) return;
+  const pct = Math.max(0, myPlayer.hp / myPlayer.maxHp * 100);
+  document.getElementById('hpFill').style.width = pct+'%';
+  const sPct = Math.max(0, myPlayer.stamina / myPlayer.maxStamina * 100);
+  document.getElementById('staminaFill').style.width = sPct+'%';
+
+  const btnAbilEl = document.getElementById('btnAbility');
+  if (myPlayer.abilCdTimer > 0) {
+    btnAbilEl.style.background = 'rgba(100, 50, 20, 0.6)';
+    btnAbilEl.style.color = '#7a5a3a';
+  } else {
+    btnAbilEl.style.background = 'rgba(0,0,0,0.28)';
+    btnAbilEl.style.color = '#f0d080';
+  }
+
+  document.getElementById('killsDisplay').textContent = '⚔️ ' + kills + ' kill' + (kills!==1?'s':'');
+
+  // Centre-top match HUD
+  const livesEl = document.getElementById('hudLives');
+  const timerEl = document.getElementById('hudTimer');
+
+  if (optLives && isFinite(myLivesLeft)) {
+    livesEl.textContent = '❤️'.repeat(Math.max(0, myLivesLeft));
+  } else {
+    livesEl.textContent = '';
+  }
+
+  if (optTimer) {
+    const m = Math.floor(matchTimeLeft / 60);
+    const s = Math.floor(matchTimeLeft % 60);
+    timerEl.textContent = '⏱ ' + m + ':' + String(s).padStart(2, '0');
+    timerEl.style.color = matchTimeLeft < 30 ? '#ff6040' : '#f0d080';
+  } else {
+    timerEl.textContent = '';
+  }
+}
+
+let statusTimeout;
+function showStatus(msg) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(statusTimeout);
+  statusTimeout = setTimeout(() => { el.style.opacity='0'; }, 2500);
+}
+
+// ===========================
+//  RENDER
+// ===========================
+const TILE_COLORS = {
+  0: '#4a3820', 
+  1: '#2a1f10', 
+  2: '#3a2a18', 
+  3: '#5a4530', 
+  4: '#1a3550', 
+};
+
+const FLOOR_PATTERNS = [];
+
+function render() {
+  if (!canvas || !ctx || !myPlayer) return;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  camX = myPlayer.x - W/2;
+  camY = myPlayer.y - H/2;
+
+  ctx.save();
+  ctx.translate(-camX, -camY);
+
+  renderMap();
+
+  // NEW RENDER: Drawing floating bobbing ground items
+  for (const item of items) {
+    ctx.save();
+    ctx.font = '20px Georgia';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bobbingOffset = Math.sin(Date.now() / 180) * 3;
+    const emojiStr = item.type === 'health' ? '❤️' : '💎';
+    ctx.fillText(emojiStr, item.x, item.y + bobbingOffset);
+    ctx.restore();
+  }
+
+  // RENDER: Normal archer arrows — thin streaks with a shaft and head
+  for (const a of arrows) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.angle);
+    // Shaft
+    ctx.strokeStyle = '#c8a050';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0);
+    ctx.lineTo(8, 0);
+    ctx.stroke();
+    // Arrowhead triangle
+    ctx.fillStyle = '#e0c060';
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(2, -3);
+    ctx.lineTo(2, 3);
+    ctx.closePath();
+    ctx.fill();
+    // Tail fletching
+    ctx.strokeStyle = '#88aa66';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-12, 0); ctx.lineTo(-16, -4);
+    ctx.moveTo(-12, 0); ctx.lineTo(-16,  4);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // NEW RENDER: Drawing flying or grounded ticking archer bomb indicators
+  for (const b of bombArrows) {
+    ctx.save();
+    if (!b.hasLanded) {
+      ctx.fillStyle = '#ffcc40';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillStyle = Math.floor(Date.now() / 120) % 2 === 0 ? '#ff0000' : '#ffaa00';
+      ctx.beginPath(); ctx.arc(b.x, b.y, 7, 0, Math.PI*2); ctx.fill();
+      
+      ctx.strokeStyle = 'rgba(255, 60, 0, 0.18)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 75, 0, Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  for (const sw of swings) {
+    const t = sw.life / sw.maxLife;
+    ctx.save();
+    ctx.globalAlpha = t * 0.55;
+    ctx.strokeStyle = '#f0d080';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(sw.x, sw.y, sw.range, sw.angle - Math.PI*0.6, sw.angle + Math.PI*0.6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  for (const p of particles) {
+    const alpha = p.life / 0.8;
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  Object.values(players).forEach(p => {
+    if (p.dead) return;
+    renderPlayer(p);
+  });
+
+  for (const f of floaters) {
+    const alpha = f.life / f.maxLife;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = f.color;
+    ctx.font = 'bold 14px Georgia';
+    ctx.textAlign = 'center';
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+
+  renderMinimap();
+}
+
+function renderMap() {
+  const startTX = Math.max(0, Math.floor(camX/TILE)-1);
+  const endTX = Math.min(MAP_W, Math.ceil((camX+canvas.width)/TILE)+1);
+  const startTY = Math.max(0, Math.floor(camY/TILE)-1);
+  const endTY = Math.min(MAP_H, Math.ceil((camY+canvas.height)/TILE)+1);
+
+  for (let ty=startTY; ty<endTY; ty++) {
+    for (let tx=startTX; tx<endTX; tx++) {
+      const tile = MAP[ty][tx];
+      const px = tx*TILE, py = ty*TILE;
+
+      if (tile === 0) {
+        ctx.fillStyle = ((tx+ty)%2===0) ? '#4a3820' : '#453318';
+        ctx.fillRect(px,py,TILE,TILE);
+        if ((tx*7+ty*13)%17===0) {
+          ctx.strokeStyle = '#3a2810';
+          ctx.lineWidth=1;
+          ctx.beginPath();
+          ctx.moveTo(px+8,py+12);
+          ctx.lineTo(px+20,py+20);
+          ctx.stroke();
+        }
+      } else if (tile === 1) {
+        ctx.fillStyle = '#1e160a';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#2e2010';
+        ctx.fillRect(px+2,py+2,TILE-4,TILE-6);
+        ctx.strokeStyle = '#18100600';
+        ctx.lineWidth=1;
+        if ((tx+ty)%3===0) {
+          ctx.fillStyle='#362515';
+          ctx.fillRect(px+4,py+4,TILE/2-2,TILE/2-2);
+        }
+      } else if (tile === 2) {
+        ctx.fillStyle = '#453525';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#5a4530';
+        const pw=18, ph=TILE-4;
+        ctx.fillRect(px+(TILE-pw)/2, py+2, pw, ph);
+        ctx.fillStyle = '#6a5540';
+        ctx.fillRect(px+(TILE-pw)/2+2, py+4, pw-8, ph-8);
+        ctx.fillStyle = '#2a1a0880';
+        ctx.fillRect(px+TILE-6, py+4, 6, ph);
+      } else if (tile === 3) {
+        ctx.fillStyle = '#4a3820';
+        ctx.fillRect(px,py,TILE,TILE);
+        ctx.fillStyle = '#6a5030';
+        for (let i=0;i<3;i++) {
+          const rx=(tx*17+ty*13+i*7)%20+2;
+          const ry=(tx*11+ty*19+i*5)%20+2;
+          ctx.fillRect(px+rx,py+ry,8,8);
+        }
+      } else if (tile === 4) {
+        const wave = Math.sin(Date.now()/800 + tx*0.5 + ty*0.5) * 0.15;
+        ctx.fillStyle = `rgba(25,60,100,${0.85+wave})`;
+        ctx.fillRect(px,py,TILE,TILE);
+        if ((tx+ty)%4===0) {
+          ctx.strokeStyle = `rgba(80,140,200,${0.3+wave})`;
+          ctx.lineWidth=1;
+          ctx.beginPath();
+          ctx.arc(px+TILE/2, py+TILE/2, 10, 0, Math.PI*2);
+          ctx.stroke();
+        }
+      }
+
+      if (tile===1 && ((tx===1&&ty%5===2)||(tx===MAP_W-2&&ty%5===2))) {
+        const flicker = 0.85 + Math.sin(Date.now()/200+tx+ty)*0.15;
+        ctx.fillStyle = `rgba(255,${Math.floor(150*flicker)},0,0.9)`;
+        ctx.beginPath();
+        ctx.arc(px+TILE/2, py+TILE*0.3, 4*flicker, 0, Math.PI*2);
+        ctx.fill();
+        const grad = ctx.createRadialGradient(px+TILE/2,py+TILE*0.3,0,px+TILE/2,py+TILE*0.3,24);
+        grad.addColorStop(0,`rgba(255,180,0,${0.18*flicker})`);
+        grad.addColorStop(1,'rgba(255,100,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(px+TILE/2,py+TILE*0.3,24,0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function renderPlayer(p) {
+  const isMe = p.id === myId;
+
+  // Safe checks to avoid property crashes
+  if (!p || !p.cls) return; 
+
+  // Hide active stealthed enemy rogues completely from other clients
+  if (p.cls === 'rogue' && p.abilTimer > 0) {
+    if (!isMe) return; 
+  }
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Render the active local user with alpha transparency while stealthed
+  if (p.cls === 'rogue' && p.abilTimer > 0 && isMe) {
+    ctx.globalAlpha = 0.4;
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 14, 6, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  const r = 14;
+  // Fallback color if class def is missing
+  ctx.fillStyle = p.color || '#ffffff'; 
+  
+  // Safe shadow visual flare indicators
+  if (isMe || (p.abilTimer > 0 && (p.cls === 'knight' || p.cls === 'barbarian'))) {
+    ctx.shadowColor = (p.cls === 'knight' && p.abilTimer > 0) ? '#f0d080' : (p.color || '#fff');
+    ctx.shadowBlur = (p.abilTimer > 0) ? 16 : 8;
+  }
+  
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.strokeStyle = isMe ? '#ffffff' : '#ccbbaa';
+  ctx.lineWidth = isMe ? 2.5 : 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI*2);
+  ctx.stroke();
+
+  const wx = Math.cos(p.angle) * (r+6);
+  const wy = Math.sin(p.angle) * (r+6);
+  ctx.strokeStyle = '#f0d080';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(Math.cos(p.angle)*r*0.4, Math.sin(p.angle)*r*0.4);
+  ctx.lineTo(wx, wy);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(CLASS_DEFS[p.cls]?.symbol || '?', 0, 0);
+
+  ctx.restore();
+  ctx.globalAlpha = 1.0; 
+
+  if (!isMe) {
+    const bw = 32, bh = 5;
+    const hpFrac = Math.max(0, p.hp / (p.maxHp || 100));
+    ctx.fillStyle = '#1a0a00';
+    ctx.fillRect(p.x - bw/2, p.y - 24, bw, bh);
+    ctx.fillStyle = hpFrac > 0.5 ? '#44aa22' : hpFrac > 0.25 ? '#cc8800' : '#cc2200';
+    ctx.fillRect(p.x - bw/2, p.y - 24, bw * hpFrac, bh);
+  }
+
+  ctx.fillStyle = isMe ? '#ffffff' : '#f0d080';
+  ctx.font = isMe ? 'bold 11px Georgia' : '10px Georgia';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(p.name, p.x, p.y - 26);
+}
+
+function renderMinimap() {
+  const mCtx = minimapCtx;
+  const mW = 80, mH = 80;
+  mCtx.clearRect(0,0,mW,mH);
+
+  const sx = mW / (MAP_W * TILE);
+  const sy = mH / (MAP_H * TILE);
+
+  for (let ty=0;ty<MAP_H;ty++) {
+    for (let tx=0;tx<MAP_W;tx++) {
+      const t = MAP[ty][tx];
+      if (t===1||t===2) mCtx.fillStyle='#3a2a18';
+      else if (t===4) mCtx.fillStyle='#1a3550';
+      else continue;
+      mCtx.fillRect(tx*TILE*sx, ty*TILE*sy, TILE*sx+1, TILE*sy+1);
+    }
+  }
+
+  Object.values(players).forEach(p => {
+    if (p.dead) return;
+    // Don't draw stealthed enemy rogues on the minimap either
+    if (p.id !== myId && p.cls === 'rogue' && p.abilTimer > 0) return;
+
+    mCtx.fillStyle = p.id===myId ? '#f0d080' : p.color;
+    mCtx.beginPath();
+    mCtx.arc(p.x*sx, p.y*sy, p.id===myId?3:2, 0, Math.PI*2);
+    mCtx.fill();
+  });
+}
+
+// ===========================
+//  INPUT
+// ===========================
+function setupKeyboard() {
+  window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if ([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+    }
+    // Listen for custom shortcut configuration action
+    if (e.key.toLowerCase() === 'c' && myPlayer) {
+      useAbility(myPlayer);
+    }
+  });
+  window.addEventListener('keyup', e => { keys[e.key] = false; });
+}
+
+function setupTouch() {
+  const joystickZone = document.getElementById('joystickZone');
+  const thumb = document.getElementById('joystickThumb');
+  let joyR = 60; 
+  let joyOrigin = null;
+  let joyTouchId = null;
+
+  joystickZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+    joyTouchId = touch.identifier;
+    const rect = joystickZone.getBoundingClientRect();
+    joyR = rect.width / 2; 
+    joyOrigin = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+  }, {passive:false});
+
+  window.addEventListener('touchmove', e => {
+    for (const touch of e.changedTouches) {
+      if (touch.identifier === joyTouchId) {
+        const dx = touch.clientX - joyOrigin.x;
+        const dy = touch.clientY - joyOrigin.y;
+        const len = Math.sqrt(dx*dx+dy*dy) || 1;
+        const travel = Math.min(len, joyR * 0.82);
+        joyX = (dx/len) * (travel / joyR);
+        joyY = (dy/len) * (travel / joyR);
+        const tx = (dx/len)*travel;
+        const ty = (dy/len)*travel;
+        thumb.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+      }
+    }
+  }, {passive:false});
+
+  const resetJoy = () => {
+    joyX=0; joyY=0;
+    thumb.style.transform='translate(-50%,-50%)';
+    joyTouchId=null;
+  };
+  window.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) if (t.identifier===joyTouchId) resetJoy();
+  });
+  window.addEventListener('touchcancel', resetJoy);
+
+  // REFACTORED: Integrated Touch triggers for the new layout cluster grid setup
+  document.getElementById('btnAbility').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (myPlayer) useAbility(myPlayer);
+  }, {passive:false});
+
+  document.getElementById('btnAttack').addEventListener('touchstart', e => {
+    e.preventDefault();
+    keys['z'] = true;
+  }, {passive:false});
+  document.getElementById('btnAttack').addEventListener('touchend', e => {
+    e.preventDefault();
+    keys['z'] = false;
+  }, {passive:false});
+  
+  document.getElementById('btnRoll').addEventListener('touchstart', e => {
+    e.preventDefault();
+    keys['x'] = true;
+  }, {passive:false});
+  document.getElementById('btnRoll').addEventListener('touchend', e => {
+    e.preventDefault();
+    keys['x'] = false;
+  }, {passive:false});
+}
+</script>
+</body>
+</html>
