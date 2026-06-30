@@ -328,7 +328,7 @@
 
   <div class="lobbySection">
     <div class="lobbyLabel">CHOOSE YOUR BATTLEFIELD</div>
-    <div id="mapPicker">
+  @(if playerCount)  <div id="mapPicker">
       <button class="arrowBtn" onclick="cycleMap(-1)">&#9664;</button>
       <div id="mapPreviewBox">
         <canvas id="mapPreviewCanvas" width="180" height="100"></canvas>
@@ -453,10 +453,10 @@ if (!window.webxdc) {
 // ===========================
 // REFACTORED: Class configuration updates supporting customized ranges and special cooldown rules
 const CLASS_DEFS = {
-  knight:    { speed:120, maxHp:120, dmg:25, attackRange:52,  attackCooldown:0.7,  rollSpeed:200, color:'#8899cc', emoji:'🛡️', symbol:'K', abilCd: 10.0 },
-  rogue:     { speed:200, maxHp:80,  dmg:20, attackRange:44,  attackCooldown:0.45, rollSpeed:300, color:'#887755', emoji:'🗡️', symbol:'R', abilCd: 12.0 },
-  barbarian: { speed:155, maxHp:100, dmg:35, attackRange:56,  attackCooldown:0.85, rollSpeed:230, color:'#cc7733', emoji:'🪓', symbol:'B', abilCd: 8.0  },
-  archer:    { speed:185, maxHp:70,  dmg:22, attackRange:150, attackCooldown:0.35, rollSpeed:280, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
+  knight:    { speed:130, maxHp:120, dmg:25, attackRange:50,  attackCooldown:0.9,  rollSpeed:200, color:'#8899cc', emoji:'🛡️', symbol:'K', abilCd: 10.0 },
+  rogue:     { speed:210, maxHp:80,  dmg:20, attackRange:44,  attackCooldown:0.65, rollSpeed:400, color:'#887755', emoji:'🗡️', symbol:'R', abilCd: 12.0 },
+  barbarian: { speed:155, maxHp:100, dmg:35, attackRange:50,  attackCooldown:1.2, rollSpeed:230, color:'#cc7733', emoji:'🪓', symbol:'B', abilCd: 8.0  },
+  archer:    { speed:185, maxHp:90,  dmg:22, attackRange:150, attackCooldown:0.5, rollSpeed:300, color:'#66aa55', emoji:'🏹', symbol:'A', abilCd: 9.0  }
 };
 
 const MAPS = [[
@@ -637,7 +637,7 @@ let lastSerial = 0;
 // ── MATCH OPTIONS (read from lobby controls on joinGame) ──────────
 let optBots      = false;
 let optBotCount  = 3;
-let optLives     = true;
+let optLives     = false;
 let optTimer     = true;
 
 // ── MATCH STATE ───────────────────────────────────────────────────
@@ -842,6 +842,10 @@ function selectClass(el) {
 function joinGame() {
   const inp = document.getElementById('nameInput').value.trim();
   if (inp) myName = inp;
+  window.webxdc.sendUpdate({
+    info: myName + ' has entered the arena! ⚔️',
+    payload: { type: 'lobby', name: myName, id: myId }
+  });
 
   // Read match options from the lobby controls
   optBots     = document.getElementById('optBots').checked;
@@ -875,6 +879,7 @@ function joinGame() {
 // before myPlayer existed.
 const lobbyPlayers = {};
 let gameStarted = false;
+let playerCountNum = Object.keys(lobbyPlayers).length + (document.getElementById('optBots').checked ? Math.min(8, Math.max(1, parseInt(document.getElementById('optBotCount').value) || 3)) : 0);
 
 function onAnyUpdate(update) {
   // Always advance lastSerial so we never replay old messages
@@ -884,11 +889,12 @@ function onAnyUpdate(update) {
   if (!p) return;
 
   // ── Lobby-phase messages (visible to everyone, pre-game) ─────────
+  playerCountNum = Object.keys(lobbyPlayers).length + (document.getElementById('optBots').checked ? Math.min(8, Math.max(1, parseInt(document.getElementById('optBotCount').value) || 3)) : 0);
   if (p.type === 'lobby') {
     lobbyPlayers[p.id] = p.name;
     const count = Object.keys(lobbyPlayers).length;
     const el = document.getElementById('playerCount');
-    if (el) el.textContent = count === 1 ? '1 warrior ready' : count + ' warriors in the hall';
+    if (el) el.textContent = count === 1 ? '1 warrior ready' : playerCountNum + ' warriors in the hall';
     return;
   }
 
